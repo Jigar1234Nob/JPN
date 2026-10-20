@@ -1,59 +1,83 @@
 # JPN backend
 
-Node.js 20+ / Express API using Supabase Auth for identity and Supabase Postgres row-level security for profile data.
+Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level security, manual paid entitlements, and private download links.
 
-## Endpoints
+## API endpoints
 
 - GET /api/health - public health check
-- GET /api/me - authenticated account identity
-- GET /api/profile - authenticated user's profile
-- PATCH /api/profile - update the authenticated user's display name
+- GET /api/me - authenticated account identity, role, and membership status
+- GET /api/profile and PATCH /api/profile - current user's profile
+- GET /api/entitlement - current user's server-side paid status
+- GET /api/downloads - lists published downloads only for active paid members (admins can access)
+- POST /api/downloads/:id/url - creates a private signed download link lasting 60 seconds
+- GET /api/admin/users?email=... - admin-only member search
+- PATCH /api/admin/users/:id/entitlement - admin-only grant/revoke paid access
 
-Protected endpoints require Authorization: Bearer <Supabase access token>. The API verifies the token with Supabase Auth and uses that same user token for database requests, so RLS policies still apply. The browser never supplies the trusted user ID.
+All protected endpoints require Authorization: Bearer <Supabase access token>. The API validates the token with Supabase Auth. Database calls use the same user's JWT, and admin RPC functions independently verify the caller's immutable app_metadata role. No service-role key is required for this starter.
 
-## 1. Prepare Supabase
+## 1. Apply database migrations
 
-1. Open your Supabase project dashboard.
-2. Go to SQL Editor.
-3. Run the script at backend/sql/001_profiles.sql.
-4. In Authentication > URL Configuration, set the Site URL to https://jigar1234nob.github.io/JPN/ and allow the JPN redirect URLs.
-5. In Authentication > Providers, enable Email and decide whether to require email confirmation.
+In Supabase Dashboard > SQL Editor, run these scripts in order:
 
-## 2. Run locally
+1. backend/sql/001_profiles.sql
+2. backend/sql/002_entitlements_and_downloads.sql
 
-Open a terminal in the backend folder:
+The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. It is safe to re-run for the policies/functions it manages, but review the script before applying to an existing production database.
+
+## 2. Create your administrator account
+
+1. Create a normal account using the JPN login page, or choose the account you intend to administer.
+2. In Supabase Dashboard, open Authentication > Users and select that account.
+3. Edit its **app metadata** (not user metadata) to include this JSON object: {"role":"admin"}.
+4. Save the change, then sign out and sign back in so the account gets a fresh access token.
+5. Open https://jigar1234nob.github.io/JPN/admin/ and confirm that the admin console appears.
+
+Never implement admin status using a browser-editable user_metadata field. The API trusts only server-controlled app_metadata and the database RPC functions check that role again.
+
+## 3. Run locally
+
+From the backend directory:
 
     npm install
-    cp .env.example .env
-
-Edit .env with the Supabase project URL and publishable key, then run:
-
+    Copy-Item .env.example .env
     npm run dev
+
+Edit .env with the Supabase project URL and publishable key. On Windows PowerShell, Copy-Item is the native copy command. The API will listen on http://localhost:3000 unless PORT is changed.
 
 Check http://localhost:3000/api/health.
 
-Windows PowerShell:
+## 4. Deploy the API
 
-    Copy-Item .env.example .env
-    npm install
-    npm run dev
+For Render:
 
-Never commit .env. Do not use a Supabase service-role or secret key in this scaffold; database access is user-scoped and constrained by RLS.
-
-## 3. Deploy the API
-
-One simple option is Render:
-
-1. Create a new Web Service connected to this repository.
+1. Create a Web Service connected to this repository.
 2. Set Root Directory to backend.
 3. Build command: npm install
 4. Start command: npm start
-5. Add environment variables SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, and FRONTEND_ORIGINS=https://jigar1234nob.github.io
-6. After deployment, open the service's /api/health URL to verify it responds.
-7. Copy the deployed HTTPS service origin (without /api) into JPN_API_BASE in docs/supabase-config.js, commit that change, and wait for GitHub Pages to rebuild. The account dashboard will then use the API for profile reads and saves. Leave JPN_API_BASE empty to use Supabase directly with RLS.
+5. Add SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, and FRONTEND_ORIGINS=https://jigar1234nob.github.io.
+6. After deployment, test the service's /api/health endpoint.
+7. Ensure docs/supabase-config.js exports JPN_API_BASE set to the deployed HTTPS origin, without /api at the end.
 
-The API is not live just because these files are committed. Deployment and environment variables are still required. For production, use HTTPS, monitor logs, and configure rate limits appropriate to the service.
+The API is not live just because files are committed. A successful /api/health response and working environment variables are required.
 
-## Security scope
+## 5. Publish a private download
 
-This starter provides token verification, CORS, basic rate limiting, and user-scoped profile endpoints. It does not yet implement proxy fetching, subscriptions/payments, admin roles, download entitlements, or server-side subscription enforcement. Those must be implemented before exposing paid or restricted services. GitHub Pages is static hosting and cannot enforce private-page access by itself.
+The bucket jpn-private-downloads is private. Upload the release file to it using Supabase Storage while signed in as the administrator. Then, as the admin, insert a row in public.jpn_downloads, for example:
+
+    insert into public.jpn_downloads (id, title, description, version, bucket, object_path, published)
+    values ('jpn-app-1-0', 'JPN App', 'Official JPN application', '1.0.0',
+            'jpn-private-downloads', 'releases/jpn-app-1-0.zip', true);
+
+Replace object_path with the exact path of the uploaded file. The admin policy permits this insert through a properly authenticated admin SQL/session. Do not upload private releases into the public GitHub Pages docs folder. Public assets are not gated.
+
+An active paid entitlement is required for the API to list downloads and generate signed URLs. Storage RLS also checks the entitlement. Links expire after 60 seconds; links already generated remain valid until they expire.
+
+## Manual paid access, not billing
+
+There is no checkout, payment processor, or automatic billing. The admin opens /JPN/admin/, searches by email, and clicks Mark as paid or Revoke paid access. An optional expiry date can be set. This writes an entitlement in the database; the browser cannot grant itself membership.
+
+## Security scope and remaining work
+
+This starter enforces user sessions for profile APIs, server-verified admin role checks, manual paid entitlements, and private download access. GitHub Pages still serves the public HTML/CSS/JS pages to anyone who knows their URLs, but sensitive account data, admin actions, and download links are protected by the backend/database. Never place private files in docs/ or rely on hidden navigation for access control.
+
+The web proxy itself is intentionally not implemented yet, as requested. Before exposing it, build dedicated proxy fetch restrictions and prevent SSRF (block loopback, private, link-local, metadata-service, and non-HTTP(S) destinations), enforce quotas, and add abuse monitoring.
