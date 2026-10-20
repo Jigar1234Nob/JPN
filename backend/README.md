@@ -50,6 +50,7 @@ One simple option is Render:
 4. Start command: npm start
 5. Add environment variables SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, and FRONTEND_ORIGINS=https://jigar1234nob.github.io
 6. After deployment, open the service's /api/health URL to verify it responds.
+7. Copy the deployed HTTPS service origin (without /api) into JPN_API_BASE in docs/supabase-config.js, commit that change, and wait for GitHub Pages to rebuild. The account dashboard will then use the API for profile reads and saves. Leave JPN_API_BASE empty to use Supabase directly with RLS.
 
 The API is not live just because these files are committed. Deployment and environment variables are still required. For production, use HTTPS, monitor logs, and configure rate limits appropriate to the service.
 
