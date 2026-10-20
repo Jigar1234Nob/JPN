@@ -1,0 +1,110 @@
+/* JPN unified visual system, matched to the login page. */
+:root{
+  color-scheme:dark;
+  --bg:#10131c;
+  --panel:#191e2b;
+  --panel-raised:#202638;
+  --text:#f6f7fb;
+  --muted:#a7afc1;
+  --cyan:#53d9f0;
+  --purple:#a99bff;
+  --blue:#1473e6;
+  --border:rgba(204,216,255,.15);
+  --danger:#ff9c9c;
+  --success:#7be0b0;
+  --jpn-ease:cubic-bezier(.22,1,.36,1);
+  --jpn-motion-fast:180ms;
+  --jpn-motion-medium:420ms;
+}
+html{scroll-behavior:smooth;scroll-padding-top:100px}
+body{
+  color:var(--text);
+  background:
+    radial-gradient(ellipse at 12% 0%,rgba(83,217,240,.075),transparent 38rem),
+    radial-gradient(ellipse at 90% 16%,rgba(169,155,255,.075),transparent 36rem),
+    var(--bg);
+  font-family:"DM Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+h1,h2,h3,h4,.heading,.page-title{font-family:"Space Grotesk","DM Sans",sans-serif;letter-spacing:-.035em}
+p,.muted,.subtext,.meta,.description{color:var(--muted)}
+a{color:inherit;text-decoration-color:rgba(83,217,240,.35);text-underline-offset:.22em}
+a:hover{color:var(--cyan)}
+header,.topbar,nav{
+  border-color:var(--border);
+}
+header{
+  background:rgba(16,19,28,.88);
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
+}
+button,.button,.btn,.primary,.small-button,.wide{
+  border-radius:9px;
+  transition:background-color var(--jpn-motion-fast) ease,border-color var(--jpn-motion-fast) ease,color var(--jpn-motion-fast) ease,box-shadow var(--jpn-motion-medium) var(--jpn-ease),transform var(--jpn-motion-medium) var(--jpn-ease);
+}
+button:not(:disabled),.button,.btn,.primary,.small-button,.wide{cursor:pointer}
+button:focus-visible,.button:focus-visible,.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--cyan);
+  outline-offset:3px;
+}
+button:disabled{cursor:wait;opacity:.62}
+input,select,textarea{
+  font-family:"DM Sans",system-ui,sans-serif;
+  transition:border-color 180ms ease,box-shadow 180ms ease,background-color 180ms ease;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--cyan)}
+/* Shared dark surfaces */
+.panel,.card,.plan,.feature-card,.metric-card,.stat-card,.settings-card,.section-card,.list-row,.note,.countdown-panel,.time-box,.side-link:not(.active){
+  border-color:var(--border);
+}
+.panel,.card,.plan,.feature-card,.metric-card,.stat-card,.settings-card,.section-card,.countdown-panel,.time-box{
+  background:linear-gradient(145deg,rgba(31,37,53,.96),rgba(25,30,43,.98));
+  box-shadow:0 18px 54px rgba(0,0,0,.16);
+}
+.panel:hover,.card:hover,.plan:hover,.feature-card:hover,.metric-card:hover,.stat-card:hover,.settings-card:hover,.section-card:hover{
+  border-color:rgba(83,217,240,.3);
+}
+.badge,.tag,.pill{border-radius:999px}
+hr{border:0;border-top:1px solid var(--border)}
+footer{border-color:var(--border);color:#818ba0}
+/* Keep the login page's light sign-in card, segmented tabs and blue primary action as the signature treatment. */
+.auth-card{
+  background:#f7f8fb!important;
+  color:#171a22!important;
+  border:1px solid rgba(255,255,255,.58);
+  box-shadow:0 25px 90px rgba(0,0,0,.34);
+}
+.auth-card p,.auth-card .subtext,.auth-card .legal{color:#5c6371}
+.auth-card input{
+  background:#fff;color:#151922;border-color:#cdd2dc;
+}
+.auth-card input:focus{border-color:#2879c7;box-shadow:0 0 0 3px #2879c71c}
+.auth-card .primary,.primary{
+  background:#1473e6;color:#fff;border-color:transparent;
+}
+.auth-card .primary:hover,.primary:hover{background:#0d66d0;color:#fff}
+.auth-card a,.auth-card .text-button{color:#126ac5}
+.auth-card .tab[aria-selected=true]{background:#fff;color:#171a22}
+.auth-card .tabs{background:#e8eaf0}
+.auth-card .notice{background:#edf2f8;color:#4c5565;border-color:#d5dbe5}
+.auth-card .notice[data-kind=error]{background:#fff0f0;color:#8a2020;border-color:#f0c4c4}
+.auth-card .notice[data-kind=success]{background:#eafaf2;color:#176541;border-color:#b8e5d1}
+/* Bring each page's existing custom layouts onto the same login-page palette. */
+body:has(.layout) aside,
+.layout aside{background:rgba(25,30,43,.96);border-color:var(--border)}
+.layout main,.main-content{background:transparent}
+.side-link.active,.side-link[aria-current=page]{
+  background:rgba(83,217,240,.09);border-color:rgba(83,217,240,.18);color:var(--cyan)
+}
+.plan.featured,.featured,.highlighted{border-color:rgba(169,155,255,.55)}
+.eyebrow,.kicker,.section-label{color:var(--cyan)}
+.gradient,.gradient-text{
+  background:linear-gradient(105deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.notice[data-kind=error],[role=alert]{border-color:rgba(255,156,156,.45)}
+.notice[data-kind=success]{border-color:rgba(123,224,176,.4)}
+::selection{background:rgba(83,217,240,.28);color:var(--text)}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
