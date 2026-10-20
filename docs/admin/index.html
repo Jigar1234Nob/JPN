@@ -1,23 +1,77 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080d1b"><title>JPN Admin Preview</title><link rel="icon" type="image/svg+xml" href="/JPN/favicon.svg">
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080d1b"><title>JPN Admin Console</title>
+<link rel="icon" type="image/svg+xml" href="/JPN/favicon.svg">
+<link rel="stylesheet" href="/JPN/motion.css">
 <style>
-:root{color-scheme:dark;--bg:#080d1b;--panel:#10182b;--text:#f3f6ff;--muted:#9caac4;--blue:#1687ff;--cyan:#22d3ee;--purple:#9b8cff;--border:rgba(164,190,255,.16)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#1687ff20,transparent 36rem),var(--bg);color:var(--text);font:16px/1.6 system-ui,sans-serif}.wrap{width:min(1000px,calc(100% - 32px));margin:auto}header{border-bottom:1px solid var(--border);padding:20px 0}.brand{display:flex;align-items:center;gap:12px;font-weight:800}.logo{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--blue);color:#000;font-size:24px}main{padding:35px 0}.muted{color:var(--muted)}.panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}.row:last-child{border:0}button,a.btn{cursor:pointer;border:1px solid var(--border);border-radius:10px;padding:10px 14px;background:#15213a;color:var(--text);font:inherit;text-decoration:none}button.primary{background:var(--blue);color:#000;border:0;font-weight:800}select{max-width:100%;padding:9px;border-radius:9px;background:#080d1b;color:var(--text);border:1px solid var(--border)}.badge{font-size:.75rem;border:1px solid #22d3ee55;color:var(--cyan);border-radius:99px;padding:4px 9px}.notice{border-left:3px solid #f59e0b;padding:12px 14px;background:#f59e0b12;color:#f6d59a}code{overflow-wrap:anywhere}@media(max-width:650px){.grid{grid-template-columns:1fr}.row{align-items:flex-start;flex-direction:column}}
-</style>  <link rel="stylesheet" href="/JPN/motion.css">
-</head><body>
-<header><div class="wrap brand"><span class="logo">J</span><span>JPN Admin Preview<small class="muted" style="display:block;font-weight:400">J-PRIVATE-NETWORK · staging controls</small></span><span style="margin-left:auto" class="badge">TEST AREA</span></div></header>
-<main class="wrap"><h1>Admin preview</h1><p class="muted">A small dashboard for testing JPN's planned launch settings.</p>
-<div class="notice"><strong>Privacy warning:</strong> this is a static preview, not a secure admin system. Settings are saved only in this browser. It does not protect the site or control production. Anyone who can access a publicly hosted page can view its source. Do not enter passwords, API keys, or private data here. Keep JPN off public hosting until you deploy real server-side authentication.</div>
-<div class="grid"><section class="panel"><h2>Launch controls</h2>
-<div class="row"><div><strong>Launch state</strong><div class="muted">Local preview preference</div></div><select id="launch"><option value="private">Private / Coming soon</option><option value="ready">Ready to launch</option></select></div>
-<div class="row"><div><strong>JPN VPN app</strong><div class="muted">Feature status</div></div><select id="vpn"><option value="soon">Coming soon</option><option value="ready">Available</option></select></div>
-<div class="row"><div><strong>Quick Flash</strong><div class="muted">Feature status</div></div><select id="flash"><option value="soon">Coming soon</option><option value="ready">Available</option></select></div>
-<p><button class="primary" id="save">Save preview</button> <button id="reset">Reset defaults</button></p><p id="status" class="muted" aria-live="polite"></p></section>
-<section class="panel"><h2>Site shortcuts</h2><div class="row"><span>Homepage</span><a class="btn" href="/JPN/">Open homepage ↗</a></div><div class="row"><span>Pricing</span><a class="btn" href="/JPN/pricing/">Open pricing ↗</a></div><div class="row"><span>Admin path</span><code>/JPN/admin/</code></div><p class="muted">Changes on this page do not automatically update the homepage or pricing page.</p></section></div>
-<section class="panel"><h2>Before launch</h2><ul><li>Host the proxy backend separately from GitHub Pages.</li><li>Use server-side login and admin roles, not a client-side password prompt.</li><li>Protect secrets with environment variables.</li><li>Rate-limit proxy use and block private, loopback and link-local destinations to prevent SSRF.</li><li>Test in a private staging environment before enabling public access.</li></ul></section></main>
-<script>
-const ids=["launch","vpn","flash"],defaults={launch:"private",vpn:"soon",flash:"soon"};
-function load(){let saved={};try{saved=JSON.parse(localStorage.getItem("jpn-admin-preview")||"{}")||{}}catch{}ids.forEach(id=>document.getElementById(id).value=saved[id]||defaults[id])}
-document.getElementById("save").addEventListener("click",()=>{const v={};ids.forEach(id=>v[id]=document.getElementById(id).value);try{localStorage.setItem("jpn-admin-preview",JSON.stringify(v));document.getElementById("status").textContent="Saved in this browser only. No public site settings changed."}catch{document.getElementById("status").textContent="Could not save settings in this browser."}});
-document.getElementById("reset").addEventListener("click",()=>{localStorage.removeItem("jpn-admin-preview");load();document.getElementById("status").textContent="Preview reset to defaults."});load();
-</script>  <script src="/JPN/motion.js" defer></script>
+:root{color-scheme:dark;--bg:#080d1b;--panel:#10182b;--text:#f3f6ff;--muted:#9caac4;--cyan:#53d9f0;--purple:#a99bff;--border:rgba(164,190,255,.16);--green:#7be0b0;--red:#ff9a9a}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 15% 0%,#1687ff20,transparent 36rem),var(--bg);color:var(--text);font:15px/1.6 system-ui,sans-serif}a{color:inherit;text-decoration:none}.wrap{width:min(1050px,calc(100% - 32px));margin:auto}header{border-bottom:1px solid var(--border);padding:18px 0;background:#080d1bc9;backdrop-filter:blur(18px)}.brand{display:flex;align-items:center;gap:12px;font-weight:800}.logo{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--cyan),var(--purple));color:#06101b;font-size:24px}.muted{color:var(--muted)}main{padding:38px 0 70px}h1,h2{letter-spacing:-.035em;line-height:1.15}h1{font-size:clamp(2rem,5vw,3rem);margin:8px 0}h2{font-size:1.15rem}.eyebrow{font-size:.75rem;color:var(--cyan);letter-spacing:.14em;text-transform:uppercase;font-weight:800}.panel{padding:clamp(18px,3vw,28px);margin:20px 0;background:linear-gradient(145deg,#111a2d,#0e1525);border:1px solid var(--border);border-radius:20px;box-shadow:0 20px 60px #0002}.notice{padding:13px 15px;border:1px solid var(--border);border-radius:12px;background:#0b1220;color:var(--muted);overflow-wrap:anywhere;margin:14px 0}.notice[data-kind=error]{color:#ffd1d1;border-color:#ff9a9a55;background:#301a22}.notice[data-kind=success]{color:#c5ffe0;border-color:#7be0b055;background:#132a25}.notice:empty{display:none}.formrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}input{min-width:0;padding:12px 13px;border-radius:10px;border:1px solid var(--border);background:#080d1b;color:var(--text);font:inherit}input[type=email]{flex:1;min-width:220px}input[type=date]{width:180px}button,.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:#15213a;color:var(--text);font:600 .9rem system-ui,sans-serif;cursor:pointer}button.primary{background:linear-gradient(100deg,var(--cyan),#86e9ff);color:#06101b;border-color:transparent;font-weight:800}button.danger{border-color:#ff9a9a55;color:#ffcaca}button:disabled{opacity:.55;cursor:wait}.user{padding:17px 0;border-top:1px solid var(--border);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}.user:first-child{border-top:0}.email{font-weight:750;overflow-wrap:anywhere}.meta{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}.pill{display:inline-flex;padding:4px 9px;border-radius:99px;background:#7be0b014;color:var(--green);font-size:.75rem;font-weight:800}.pill.off{background:#9caac414;color:var(--muted)}.user-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}.empty{padding:24px;text-align:center;color:var(--muted)}.foot{font-size:.82rem;color:var(--muted)}@media(max-width:620px){.user{grid-template-columns:1fr}.user-actions{justify-content:flex-start}input[type=date]{flex:1}}
+</style>
+</head>
+<body>
+<header><div class="wrap brand"><a class="logo" href="/JPN/" aria-label="JPN home">J</a><div>JPN Admin Console<div class="muted" style="font-size:.72rem;font-weight:500">J-PRIVATE-NETWORK · restricted tools</div></div><a href="/JPN/dashboard/" style="margin-left:auto">My account ↗</a></div></header>
+<main class="wrap">
+<div class="eyebrow">Administration</div><h1>Membership control</h1><p class="muted">Manually grant or revoke paid membership. No checkout or automatic billing is enabled.</p>
+<div id="status" class="notice" role="status" aria-live="polite">Verifying administrator access…</div>
+<section id="console" hidden>
+<div class="panel"><h2>Find a member</h2><p class="muted">Search by part of their email address. At least three characters are required.</p>
+<form id="search-form" class="formrow"><input id="email-query" type="search" autocomplete="off" placeholder="member@example.com" aria-label="Email address to search" required><button class="primary" id="search-button" type="submit">Search accounts</button></form>
+<div class="foot" style="margin-top:12px">Only authenticated users with the server-verified Supabase app_metadata role of admin can use this console.</div></div>
+<div class="panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Search results</h2><span id="count" class="muted"></span></div><div id="results" style="margin-top:12px"><div class="empty">Search for an account to manage membership.</div></div></div>
+<div class="panel"><h2>How paid access works</h2><p class="muted">Granting access creates a server-side entitlement. Revoking it blocks future API requests and new download links. Download links expire after 60 seconds. Already issued links remain valid until they expire.</p><p class="foot">This is manual membership administration, not payment processing. No checkout or automatic billing exists.</p></div>
+</section>
+</main>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, JPN_API_BASE } from "../supabase-config.js";
+const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const $=s=>document.querySelector(s), status=$("#status"), consoleEl=$("#console"), results=$("#results");
+const apiBase=JPN_API_BASE.endsWith("/")?JPN_API_BASE.slice(0,-1):JPN_API_BASE;
+function say(text,kind="info"){status.textContent=text;status.dataset.kind=kind}
+async function api(path,options={}){
+ if(!apiBase)throw new Error("The backend URL is not configured in docs/supabase-config.js.");
+ const {data:{session}}=await supabase.auth.getSession();
+ if(!session)throw new Error("Your session has expired. Sign in again.");
+ const response=await fetch(apiBase+path,{...options,headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,...(options.headers||{})}});
+ const payload=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(payload.error||"Request failed ("+response.status+")");
+ return payload;
+}
+function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function renderUsers(users){
+ $("#count").textContent=users.length+" account"+(users.length===1?"":"s");
+ if(!users.length){results.innerHTML='<div class="empty">No matching accounts found.</div>';return}
+ results.innerHTML=users.map(user=>{
+  const id=escapeHtml(user.user_id), paid=!!user.paid;
+  const expires=user.expires_at?' <span class="meta">Until '+escapeHtml(new Date(user.expires_at).toLocaleString())+'</span>':'';
+  return '<article class="user" data-user-id="'+id+'"><div><div class="email">'+escapeHtml(user.email||"(no email)")+'</div><div class="meta">Account ID: '+id+'</div><div class="meta">Created: '+escapeHtml(user.created_at?new Date(user.created_at).toLocaleDateString():"unknown")+'</div><div style="margin-top:8px"><span class="pill '+(paid?"":"off")+'">'+(paid?"PAID ACCESS ACTIVE":"FREE / NO ACCESS")+'</span>'+expires+'</div></div><div class="user-actions"><label class="meta" for="expiry-'+id+'">Optional expiry</label><input type="date" id="expiry-'+id+'" aria-label="Optional paid access expiry date"><button class="'+(paid?"danger":"primary")+'" data-toggle-paid="'+id+'" data-paid="'+(paid?"true":"false")+'">'+(paid?"Revoke paid access":"Mark as paid")+'</button></div></article>';
+ }).join("");
+ results.querySelectorAll("[data-toggle-paid]").forEach(button=>button.addEventListener("click",()=>changePaid(button)));
+}
+async function searchUsers(email){
+ $("#search-button").disabled=true;results.innerHTML='<div class="empty">Searching securely…</div>';
+ try{const data=await api("/api/admin/users?email="+encodeURIComponent(email));renderUsers(data.users||[]);say("Search complete. Changes apply to server-side entitlements.","success")}
+ catch(err){results.innerHTML='<div class="empty">Could not load accounts.</div>';say(err.message,"error")}
+ finally{$("#search-button").disabled=false}
+}
+async function changePaid(button){
+ const id=button.dataset.togglePaid, currentlyPaid=button.dataset.paid==="true", row=button.closest("[data-user-id]"), date=row.querySelector('input[type="date"]').value;
+ let expiresAt=null;
+ if(!currentlyPaid&&date){expiresAt=new Date(date+"T23:59:59").toISOString();if(new Date(expiresAt).getTime()<=Date.now()){say("Choose an expiry date in the future.","error");return}}
+ button.disabled=true;button.textContent="Saving…";say(currentlyPaid?"Revoking paid access…":"Granting paid access…");
+ try{await api("/api/admin/users/"+encodeURIComponent(id)+"/entitlement",{method:"PATCH",body:JSON.stringify({paid:!currentlyPaid,expires_at:expiresAt})});say(currentlyPaid?"Paid access revoked.":"Paid access granted manually.","success");await searchUsers($("#email-query").value.trim())}
+ catch(err){say(err.message,"error");button.disabled=false;button.textContent=currentlyPaid?"Revoke paid access":"Mark as paid"}
+}
+$("#search-form").addEventListener("submit",e=>{e.preventDefault();const email=$("#email-query").value.trim();if(email.length<3){say("Enter at least three characters.","error");return}searchUsers(email)});
+const {data:{session},error}=await supabase.auth.getSession();
+if(error||!session){location.replace("/JPN/login/")}
+else{
+ try{const identity=await api("/api/me");if(identity.user?.role!=="admin"){say("Access denied. This account does not have the server-assigned admin role.","error");}else{consoleEl.hidden=false;say("Administrator verified. Manual membership controls are enabled.","success");}}
+ catch(err){say(err.message,"error")}
+}
+supabase.auth.onAuthStateChange((event,newSession)=>{if(event==="SIGNED_OUT"||!newSession)location.replace("/JPN/login/")});
+</script>
+<script src="/JPN/motion.js" defer></script>
 </body></html>
