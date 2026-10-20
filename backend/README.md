@@ -21,8 +21,9 @@ In Supabase Dashboard > SQL Editor, run these scripts in order:
 
 1. backend/sql/001_profiles.sql
 2. backend/sql/002_entitlements_and_downloads.sql
+3. backend/sql/003_plan_requests.sql
 
-The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. It is safe to re-run for the policies/functions it manages, but review the script before applying to an existing production database.
+The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script updates the admin search result to show pending Basic plan requests. Plan requests are stored in user-editable metadata and never grant access by themselves; paid access remains controlled by the server-side entitlement. Review migrations before applying them to an existing production database.
 
 ## 2. Create your administrator account
 
