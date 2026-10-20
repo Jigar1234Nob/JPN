@@ -14,7 +14,7 @@
   }
   eligible.forEach((el, index) => {
     el.classList.add("jpn-reveal");
-    const siblings = el.parentElement ? [...el.parentElement.children].filter(node => node.classList.contains("jpn-reveal")) : [];
+    const siblings = el.parentElement ? eligible.filter(node => node.parentElement === el.parentElement) : [];
     const siblingIndex = siblings.indexOf(el);
     el.style.setProperty("--jpn-stagger", Math.min(siblingIndex, 5) * 65 + "ms");
     if (index === 0 && (el.matches(".hero, .intro, .page-head") || el.closest("header"))) el.classList.add("jpn-visible");
