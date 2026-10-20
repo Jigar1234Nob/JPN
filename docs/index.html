@@ -1,0 +1,419 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d1b">
+  <meta name="description" content="JPN (J-PRIVATE-NETWORK): web proxy access, a VPN app coming soon, and Quick Flash tools.">
+  <title>JPN | Your Web. Your Way.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080d1b;
+      --panel: #10182b;
+      --panel2: #121e35;
+      --text: #f3f6ff;
+      --muted: #9caac4;
+      --cyan: #22d3ee;
+      --purple: #9b8cff;
+      --border: rgba(164, 190, 255, .15);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 15% 0%, rgba(34,211,238,.12), transparent 36rem),
+        radial-gradient(ellipse at 90% 20%, rgba(155,140,255,.13), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      font-family: "DM Sans", sans-serif;
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    .container { width: min(1120px, calc(100% - 40px)); margin: auto; }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(8,13,27,.86);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    nav {
+      min-height: 76px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: #06101b;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    .brand small {
+      display: block;
+      color: var(--muted);
+      font: 500 .66rem "DM Sans", sans-serif;
+      letter-spacing: .12em;
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 26px; }
+    .nav-links a { color: var(--muted); font-size: .94rem; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      padding: 12px 19px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-weight: 700;
+      transition: transform .2s, border-color .2s;
+    }
+
+    .button:hover { transform: translateY(-2px); border-color: var(--cyan); }
+    .button.primary {
+      color: #06101b;
+      background: linear-gradient(100deg, var(--cyan), #86e9ff);
+      border: none;
+    }
+
+    .hero {
+      min-height: 650px;
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      align-items: center;
+      gap: 55px;
+      padding-top: 75px;
+      padding-bottom: 85px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--cyan);
+      background: rgba(34,211,238,.08);
+      border: 1px solid rgba(34,211,238,.2);
+      border-radius: 100px;
+      padding: 7px 12px;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan);
+    }
+
+    h1, h2, h3 { font-family: "Space Grotesk", sans-serif; line-height: 1.12; }
+    h1 { font-size: clamp(3rem, 6.5vw, 5.3rem); letter-spacing: -.06em; margin: 24px 0; }
+    .gradient {
+      color: transparent;
+      background: linear-gradient(100deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .hero p { color: var(--muted); font-size: 1.1rem; max-width: 550px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+
+    .visual {
+      min-height: 390px;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .orbit {
+      position: absolute;
+      width: 330px;
+      height: 330px;
+      border: 1px solid rgba(34,211,238,.2);
+      border-radius: 50%;
+      box-shadow: 0 0 75px rgba(34,211,238,.07), inset 0 0 75px rgba(155,140,255,.06);
+    }
+
+    .orbit.two { width: 255px; height: 255px; border-color: rgba(155,140,255,.32); }
+    .globe {
+      width: 175px;
+      height: 175px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      font-size: 5rem;
+      background: radial-gradient(circle at 30% 25%, #25445f, #131b36 65%);
+      border: 1px solid rgba(34,211,238,.5);
+      box-shadow: 0 0 70px rgba(34,211,238,.2);
+      z-index: 1;
+    }
+
+    .float-card {
+      position: absolute;
+      z-index: 2;
+      background: rgba(16,24,43,.94);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 15px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.25);
+      font-size: .85rem;
+    }
+
+    .float-card strong { display: block; }
+    .float-card span { color: var(--muted); font-size: .75rem; }
+    .float-card.one { top: 45px; right: 0; }
+    .float-card.two { bottom: 45px; left: 0; }
+
+    .section { padding: 80px 0; }
+    .section-head { text-align: center; max-width: 650px; margin: 0 auto 40px; }
+    .section-head h2 { font-size: clamp(2rem, 4vw, 3rem); margin: 14px 0; letter-spacing: -.04em; }
+    .section-head p { color: var(--muted); }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .card {
+      background: linear-gradient(145deg, rgba(18,30,53,.9), rgba(12,19,35,.9));
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 26px;
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      background: rgba(34,211,238,.1);
+      border-radius: 14px;
+      font-size: 1.5rem;
+    }
+
+    .card h3 { margin: 22px 0 10px; font-size: 1.25rem; }
+    .card p { color: var(--muted); margin-bottom: 0; }
+    .status { color: var(--cyan); font-size: .78rem; font-weight: 700; }
+
+    .countdown-panel {
+      border: 1px solid rgba(34,211,238,.22);
+      border-radius: 25px;
+      padding: clamp(25px, 5vw, 50px);
+      text-align: center;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(34,211,238,.12), transparent 65%),
+        var(--panel);
+    }
+
+    .countdown-panel h2 { font-size: clamp(2rem, 4vw, 3rem); margin: 16px 0; }
+    .countdown-panel p { color: var(--muted); }
+    .timer {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 650px;
+      margin: 32px auto;
+    }
+
+    .time-box {
+      padding: 20px 10px;
+      background: rgba(5,10,22,.65);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+    }
+
+    .time-box strong {
+      display: block;
+      font: 700 clamp(1.8rem, 5vw, 3rem) "Space Grotesk", sans-serif;
+      letter-spacing: -.04em;
+    }
+
+    .time-box span { color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .1em; }
+    #timer-message { color: var(--cyan); font-weight: 700; }
+
+    footer { border-top: 1px solid var(--border); padding: 30px 0; color: var(--muted); font-size: .88rem; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+    @media (max-width: 800px) {
+      .hero { grid-template-columns: 1fr; padding-top: 65px; gap: 20px; }
+      .visual { min-height: 340px; }
+      .grid { grid-template-columns: 1fr; }
+      .nav-links { gap: 13px; }
+    }
+
+    @media (max-width: 480px) {
+      .container { width: min(100% - 28px, 1120px); }
+      nav { min-height: 68px; }
+      .brand { font-size: 1.05rem; gap: 8px; }
+      .logo { width: 36px; height: 36px; }
+      .nav-links { gap: 12px; }
+      .nav-links a { font-size: .82rem; }
+      .nav-links .button { padding: 9px 11px; }
+      .timer { gap: 6px; }
+      .time-box { padding: 14px 5px; }
+      .time-box span { font-size: .63rem; letter-spacing: 0; }
+      .float-card.one { right: -2px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="container">
+      <a class="brand" href="index.html" aria-label="JPN home">
+        <span class="logo">J</span>
+        <span>JPN<small>J-PRIVATE-NETWORK</small></span>
+      </a>
+      <div class="nav-links">
+        <a class="active" href="index.html">Home</a>
+        <a href="pricing.html">Pricing</a>
+        <a class="button primary" href="#release">Launch timer</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <div>
+        <span class="eyebrow"><span class="dot"></span> Something new is loading</span>
+        <h1>Your web.<br><span class="gradient">Your way.</span></h1>
+        <p>
+          Meet JPN, or J-PRIVATE-NETWORK. A new home for web proxy access,
+          a VPN app in development, and useful tools for different operating systems.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="pricing.html">Explore the plans ↗</a>
+          <a class="button" href="#features">Explore JPN</a>
+        </div>
+      </div>
+
+      <div class="visual" aria-label="Abstract digital globe illustration">
+        <div class="orbit"></div>
+        <div class="orbit two"></div>
+        <div class="globe">🌐</div>
+        <div class="float-card one"><strong>JPN VPN</strong><span>Coming soon</span></div>
+        <div class="float-card two"><strong>Web proxy</strong><span>Part of every plan</span></div>
+      </div>
+    </section>
+
+    <section class="section container" id="features">
+      <div class="section-head">
+        <span class="eyebrow">The JPN lineup</span>
+        <h2>More than a proxy.</h2>
+        <p>One network, multiple tools, and plans designed around what you need.</p>
+      </div>
+
+      <div class="grid">
+        <article class="card">
+          <div class="card-icon">🌐</div>
+          <h3>Web Proxy</h3>
+          <span class="status">CORE FEATURE</span>
+          <p>Access the JPN web proxy with any of the three plans.</p>
+        </article>
+
+        <article class="card">
+          <div class="card-icon">🛡️</div>
+          <h3>JPN VPN App</h3>
+          <span class="status">COMING SOON</span>
+          <p>A dedicated VPN app planned for Premium and Ultimate subscribers.</p>
+        </article>
+
+        <article class="card">
+          <div class="card-icon">⚡</div>
+          <h3>Quick Flash</h3>
+          <span class="status">ULTIMATE PLAN</span>
+          <p>A planned quick-flash tool for different operating systems, included with Ultimate.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section container" id="release">
+      <div class="countdown-panel">
+        <span class="eyebrow">Launch countdown</span>
+        <h2>JPN launches <span class="gradient">soon.</span></h2>
+        <p>Countdown to Friday, 23 October 2026, at 4:00 PM Melbourne time.</p>
+
+        <div class="timer" role="timer" aria-label="Time remaining until release">
+          <div class="time-box"><strong id="days">00</strong><span>Days</span></div>
+          <div class="time-box"><strong id="hours">00</strong><span>Hours</span></div>
+          <div class="time-box"><strong id="minutes">00</strong><span>Minutes</span></div>
+          <div class="time-box"><strong id="seconds">00</strong><span>Seconds</span></div>
+        </div>
+
+        <p id="timer-message" aria-live="polite">Preparing for launch…</p>
+        <a class="button primary" href="pricing.html">View pricing</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> JPN · J-PRIVATE-NETWORK</span>
+      <span>Built for a more flexible web.</span>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    // Friday, 23 October 2026, 4:00 PM in Melbourne (AEDT, UTC+11).
+    const releaseTime = new Date("2026-10-23T16:00:00+11:00").getTime();
+
+    function updateCountdown() {
+      const remaining = releaseTime - Date.now();
+      const message = document.getElementById("timer-message");
+
+      if (remaining <= 0) {
+        ["days", "hours", "minutes", "seconds"].forEach(id => {
+          document.getElementById(id).textContent = "00";
+        });
+        message.textContent = "It's launch time!";
+        return;
+      }
+
+      const days = Math.floor(remaining / 86400000);
+      const hours = Math.floor((remaining % 86400000) / 3600000);
+      const minutes = Math.floor((remaining % 3600000) / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+
+      document.getElementById("days").textContent = String(days).padStart(2, "0");
+      document.getElementById("hours").textContent = String(hours).padStart(2, "0");
+      document.getElementById("minutes").textContent = String(minutes).padStart(2, "0");
+      document.getElementById("seconds").textContent = String(seconds).padStart(2, "0");
+      message.textContent = "Time left until launch";
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  </script>
+</body>
+</html>
+```
