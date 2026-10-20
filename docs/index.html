@@ -351,6 +351,7 @@
       <div class="nav-links">
         <a class="active" href="/JPN/" aria-current="page">Home</a>
         <a href="/JPN/pricing/">Pricing</a>
+        <span id="member-nav" hidden style="display:contents"><a href="/JPN/dashboard/">My Account</a><a href="/JPN/downloads/">Downloads</a></span>
         <a class="button primary" href="/JPN/#release">Launch timer</a>
       </div>
     </nav>
@@ -445,7 +446,19 @@
     </div>
   </footer>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const memberNav = document.getElementById("member-nav");
+    const syncMemberNav = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      memberNav.hidden = !session;
+      memberNav.style.display = session ? "contents" : "none";
+    };
+    await syncMemberNav();
+    supabase.auth.onAuthStateChange(() => { syncMemberNav(); });
+
     document.getElementById("year").textContent = new Date().getFullYear();
 
     // 4:00 PM Melbourne time on 23 October 2026 (AEDT, UTC+11).
