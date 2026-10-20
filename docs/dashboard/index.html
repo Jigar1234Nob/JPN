@@ -18,10 +18,20 @@
 </main></div></div>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "../supabase-config.js";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, JPN_API_BASE } from "../supabase-config.js";
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=s=>document.querySelector(s), notice=$("#notice");
 let currentUser=null;
+async function apiRequest(path,options={}) {
+  if(!JPN_API_BASE)return null;
+  const {data:{session}}=await supabase.auth.getSession();
+  if(!session)throw new Error("Your session expired. Sign in again.");
+  const base=JPN_API_BASE.endsWith("/")?JPN_API_BASE.slice(0,-1):JPN_API_BASE;
+  const response=await fetch(base+path,{...options,headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,...(options.headers||{})}});
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(payload.error||"API request failed ("+response.status+")");
+  return payload;
+}
 const say=(message,kind="info")=>{notice.textContent=message;notice.dataset.kind=kind};
 const initials=name=>(name||"J").trim().split(/\s+/).slice(0,2).map(x=>x[0]||"").join("").toUpperCase()||"J";
 const switchView=name=>{document.querySelectorAll(".view").forEach(el=>el.classList.toggle("active",el.id==="view-"+name));document.querySelectorAll("[data-view]").forEach(el=>el.classList.toggle("active",el.dataset.view===name));$("#crumb").textContent=({overview:"Overview",profile:"Profile",security:"Security"})[name]||"Overview";history.replaceState(null,"","#"+name);};
@@ -29,12 +39,28 @@ document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",(
 document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.go)));
 const logout=async()=>{say("Signing out…");const {error}=await supabase.auth.signOut();if(error)say(error.message,"error");else location.replace("/JPN/login/");};
 $("#side-logout").addEventListener("click",logout);$("#top-logout").addEventListener("click",logout);$("#security-logout").addEventListener("click",logout);
-async function loadProfile(){if(!currentUser)return;$("#profile-email").value=currentUser.email||"";$("#security-email").textContent=currentUser.email||"No email address";const {data,error}=await supabase.from("jpn_profiles").select("display_name,created_at,updated_at").eq("id",currentUser.id).maybeSingle();if(error){$("#display-name").value=currentUser.user_metadata?.display_name||"";say("You're signed in. Profile storage is not ready yet. Run backend/sql/001_profiles.sql in the Supabase SQL Editor. ("+error.message+")","error");return}const name=data?.display_name||currentUser.user_metadata?.display_name||"";$("#display-name").value=name;const shown=name||currentUser.email||"JPN member";$("#side-name").textContent=shown;$("#avatar").textContent=initials(shown);$("#overview-name").textContent=shown;$("#overview-email").textContent=currentUser.email||"";$("#welcome").textContent="Welcome"+(name?" back, "+name.split(/\s+/)[0]:" back")+".";
+async function loadProfile(){
+ if(!currentUser)return;
+ $("#profile-email").value=currentUser.email||"";
+ $("#security-email").textContent=currentUser.email||"No email address";
+ let data,error;
+ try {
+  if(JPN_API_BASE){const result=await apiRequest("/api/profile");data=result?.profile;}
+  else {const result=await supabase.from("jpn_profiles").select("display_name,created_at,updated_at").eq("id",currentUser.id).maybeSingle();data=result.data;error=result.error;}
+ } catch(err){error=err;}
+ if(error){$("#display-name").value=currentUser.user_metadata?.display_name||"";say("Profile storage is not ready or the API is unavailable. Run backend/sql/001_profiles.sql in Supabase and check backend configuration. ("+error.message+")","error");return;}
+ const name=data?.display_name||currentUser.user_metadata?.display_name||"";
+ $("#display-name").value=name;
+ const shown=name||currentUser.email||"JPN member";
+ $("#side-name").textContent=shown;$("#avatar").textContent=initials(shown);$("#overview-name").textContent=shown;$("#overview-email").textContent=currentUser.email||"";
+ $("#welcome").textContent="Welcome"+(name?" back, "+name.split(/\\s+/)[0]:" back")+".";
 }
 const {data:{session},error:sessionError}=await supabase.auth.getSession();
 if(sessionError||!session){location.replace("/JPN/login/")}else{currentUser=session.user;await loadProfile();if(location.hash==="#profile"||location.hash==="#security")switchView(location.hash.slice(1));if(!notice.dataset.kind)say("Your account is ready.","success")}
 supabase.auth.onAuthStateChange((event,newSession)=>{if(event==="SIGNED_OUT"||!newSession)location.replace("/JPN/login/");});
-$("#profile-form").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const button=$("#save-profile"),display_name=$("#display-name").value.trim();if(display_name.length>80){say("Display name must be 80 characters or fewer.","error");return}button.disabled=true;say("Saving your profile…");try{const {error}=await supabase.from("jpn_profiles").upsert({id:currentUser.id,display_name,updated_at:new Date().toISOString()},{onConflict:"id"});if(error)throw error;await loadProfile();say("Profile saved.","success")}catch(err){say("Profile could not be saved. Check that backend/sql/001_profiles.sql has been run in Supabase. "+(err.message||""),"error")}finally{button.disabled=false}});
+$("#profile-form").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const button=$("#save-profile"),display_name=$("#display-name").value.trim();if(display_name.length>80){say("Display name must be 80 characters or fewer.","error");return}button.disabled=true;say("Saving your profile…");try{if(JPN_API_BASE){await apiRequest("/api/profile",{method:"PATCH",body:JSON.stringify({display_name})});}
+else {const {error}=await supabase.from("jpn_profiles").upsert({id:currentUser.id,display_name,updated_at:new Date().toISOString()},{onConflict:"id"});if(error)throw error;}
+await loadProfile();say("Profile saved.","success")}catch(err){say("Profile could not be saved. Check that backend/sql/001_profiles.sql has been run in Supabase. "+(err.message||""),"error")}finally{button.disabled=false}});
 $("#password-form").addEventListener("submit",async e=>{e.preventDefault();const next=$("#new-password").value,confirm=$("#confirm-password").value,button=$("#save-password");if(next.length<8){say("Use a password with at least 8 characters.","error");return}if(next!==confirm){say("The two passwords do not match.","error");return}button.disabled=true;say("Updating password…");try{const {error}=await supabase.auth.updateUser({password:next});if(error)throw error;$("#password-form").reset();say("Password updated successfully.","success")}catch(err){say(err.message||"Password could not be updated.","error")}finally{button.disabled=false}});
 $("#email-form").addEventListener("submit",async e=>{e.preventDefault();const email=$("#new-email").value.trim(),button=$("#save-email");if(!email){say("Enter the new email address.","error");return}button.disabled=true;say("Requesting email change…");try{const {error}=await supabase.auth.updateUser({email});if(error)throw error;$("#email-form").reset();say("Email change requested. Check your inboxes for any confirmation messages from Supabase.","success")}catch(err){say(err.message||"Email could not be updated.","error")}finally{button.disabled=false}});
 </script></body></html>
