@@ -21,6 +21,8 @@ body::before {
 a, button, input, select, textarea, .button, .btn, .side-link, .tab {
   -webkit-tap-highlight-color: transparent;
 }
+header { transition: box-shadow 260ms ease, background-color 260ms ease, border-color 260ms ease; }
+.jpn-scrolled header { box-shadow: 0 8px 28px rgba(0,0,0,.12); border-bottom-color: rgba(83,217,240,.14); }
 a, button, .button, .btn, .card, .plan, .panel, .auth-card, .float-card, .time-box, .side-link {
   transition:
     color var(--jpn-motion-fast) ease,
