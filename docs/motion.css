@@ -1,0 +1,99 @@
+/* JPN motion system: subtle, fast, and respectful of reduced-motion preferences. */
+:root {
+  --jpn-ease: cubic-bezier(.22, 1, .36, 1);
+  --jpn-motion-fast: 180ms;
+  --jpn-motion-medium: 420ms;
+}
+html { scroll-behavior: smooth; }
+body { isolation: isolate; }
+body::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: -20%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 18% 12%, rgba(83,217,240,.055), transparent 35%),
+    radial-gradient(ellipse at 82% 38%, rgba(169,155,255,.06), transparent 36%);
+  opacity: .8;
+  animation: jpn-ambient 18s ease-in-out infinite alternate;
+}
+a, button, input, select, textarea, .button, .btn, .side-link, .tab {
+  -webkit-tap-highlight-color: transparent;
+}
+a, button, .button, .btn, .card, .plan, .panel, .auth-card, .float-card, .time-box, .side-link {
+  transition:
+    color var(--jpn-motion-fast) ease,
+    background-color var(--jpn-motion-fast) ease,
+    border-color var(--jpn-motion-fast) ease,
+    box-shadow var(--jpn-motion-medium) var(--jpn-ease),
+    transform var(--jpn-motion-medium) var(--jpn-ease),
+    opacity var(--jpn-motion-medium) ease;
+}
+a:not(.button):not(.btn):not(.brand):not(.logo):not(.side-link) {
+  text-underline-offset: .22em;
+}
+button, .button, .btn { transform: translateZ(0); }
+button:not(:disabled):active, .button:active, .btn:active { transform: scale(.975); }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--cyan, #53d9f0);
+  outline-offset: 4px;
+}
+.brand img, .brand .logo { transition: transform 500ms var(--jpn-ease), box-shadow 500ms var(--jpn-ease); }
+.brand:hover img, .brand:hover .logo { transform: rotate(-5deg) scale(1.045); }
+.card:hover, .plan:hover, .panel:hover, .auth-card:hover {
+  border-color: rgba(83,217,240,.28);
+  box-shadow: 0 18px 55px rgba(0,0,0,.14);
+}
+.card:hover .card-icon { transform: translateY(-2px); }
+.nav-links a, .toplinks a, .links a { transition: color 180ms ease, opacity 180ms ease; }
+.nav-links a:not(.button)::after, .toplinks a:not(.signup-link)::after, .links a::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 240ms var(--jpn-ease);
+  opacity: .7;
+}
+.nav-links a:hover::after, .toplinks a:hover::after, .links a:hover::after { transform: scaleX(1); }
+.jpn-reveal {
+  opacity: 0;
+  transform: translate3d(0, 20px, 0) scale(.99);
+  transition: opacity 650ms var(--jpn-ease), transform 650ms var(--jpn-ease);
+  transition-delay: var(--jpn-stagger, 0ms);
+  will-change: opacity, transform;
+}
+.jpn-reveal.jpn-visible { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+.jpn-hero-enter { animation: jpn-enter 850ms var(--jpn-ease) both; }
+.jpn-hero-enter > * { animation: jpn-enter 850ms var(--jpn-ease) both; }
+.jpn-hero-enter > *:nth-child(2) { animation-delay: 90ms; }
+.jpn-hero-enter > *:nth-child(3) { animation-delay: 160ms; }
+@keyframes jpn-enter {
+  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.99); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes jpn-ambient {
+  from { transform: translate3d(-1%, -1%, 0) scale(1); }
+  to { transform: translate3d(1%, 1%, 0) scale(1.035); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .button:hover, .btn:hover { transform: translateY(-2px); }
+  .card, .plan, .float-card, .time-box { transform: translateZ(0); }
+  .card:hover, .plan:hover { transform: translateY(-4px); }
+  .float-card { animation: jpn-float 6s ease-in-out infinite; }
+  .float-card.two { animation-delay: -2.4s; }
+}
+@keyframes jpn-float { 0%,100% { translate: 0 0; } 50% { translate: 0 -5px; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .jpn-reveal { opacity: 1 !important; transform: none !important; will-change: auto; }
+}
