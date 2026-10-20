@@ -22,6 +22,9 @@ const allowedOrigins = (process.env.FRONTEND_ORIGINS ||
   .split(",").map(value => value.trim()).filter(Boolean);
 
 app.disable("x-powered-by");
+// Render terminates HTTPS in front of this service and forwards client IPs.
+// Trust one proxy hop so express-rate-limit can identify clients correctly.
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({
   origin(origin, callback) {
