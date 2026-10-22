@@ -48,6 +48,14 @@ drop policy if exists "Users can read their own JPN entitlement" on public.jpn_e
 create policy "Users can read their own JPN entitlement" on public.jpn_entitlements for select to authenticated
 using ((select auth.uid()) = user_id and public.jpn_current_account_enabled());
 
+drop policy if exists "Admins can read all JPN entitlements" on public.jpn_entitlements;
+create policy "Admins can read all JPN entitlements" on public.jpn_entitlements for select to authenticated
+using ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled());
+drop policy if exists "Admins can manage JPN entitlements" on public.jpn_entitlements;
+create policy "Admins can manage JPN entitlements" on public.jpn_entitlements for all to authenticated
+using ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled())
+with check ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled());
+
 drop policy if exists "Paid members can list published JPN downloads" on public.jpn_downloads;
 create policy "Paid members can list published JPN downloads" on public.jpn_downloads for select to authenticated
 using (published = true and public.jpn_current_account_enabled() and exists (
@@ -104,6 +112,13 @@ drop policy if exists "Admins can manage JPN downloads" on public.jpn_downloads;
 create policy "Admins can manage JPN downloads" on public.jpn_downloads for all to authenticated
 using ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled())
 with check ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled());
+
+drop policy if exists "Admins can manage JPN private files" on storage.objects;
+create policy "Admins can manage JPN private files" on storage.objects for all to authenticated
+using (bucket_id='jpn-private-downloads' and (auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled())
+with check (bucket_id='jpn-private-downloads' and (auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled());
+
+revoke all on function public.jpn_admin_set_paid(uuid, boolean, timestamptz) from public, anon, authenticated;
 
 create table if not exists public.jpn_enterprise_inquiries (
   id uuid primary key default gen_random_uuid(),
