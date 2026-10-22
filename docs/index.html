@@ -364,7 +364,7 @@
         <a class="active" href="/JPN/" aria-current="page">Home</a>
         <a href="/JPN/plans/">Plans</a>
         <span id="member-nav" hidden style="display:contents"><a href="/JPN/dashboard/">My Account</a><a href="/JPN/dashboard/#downloads">Downloads</a></span>
-        <a class="button primary" href="/JPN/#release">Launch timer</a>
+        <a class="button primary" href="/JPN/login/?mode=signup">Create account</a>
       </div>
     </nav>
   </header>
@@ -435,8 +435,8 @@
     <section class="section container" id="release">
       <div class="countdown-panel">
         <span class="eyebrow">Basic launch schedule</span>
-        <h2>Basic pre-orders are <span class="gradient">open now.</span></h2>
-        <p>Pre-orders are open now. Full release is Monday, 26 October 2026.</p>
+        <h2>JPN accounts are <span class="gradient">open now.</span></h2>
+        <p>Create your account now. Basic plan requests are open for manual review; checkout and automatic billing are not enabled.</p>
 
         <div class="timer" role="timer" aria-label="Launch countdown" style="display:none">
           <div class="time-box"><strong id="days">00</strong><span>Days</span></div>
@@ -445,8 +445,8 @@
           <div class="time-box"><strong id="seconds">00</strong><span>Seconds</span></div>
         </div>
 
-        <p id="timer-message" aria-live="polite">Preparing for launch…</p>
-        <a class="button primary" id="launch-action" href="/JPN/plans/">View plans</a>
+        <p id="timer-message" aria-live="polite">Account creation and Basic plan requests are open.</p>
+        <a class="button primary" id="launch-action" href="/JPN/login/?mode=signup">Create account</a>
       </div>
     </section>
   </main>
@@ -468,48 +468,14 @@
 
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    // Basic pre-orders have been opened early; full release remains 26 October 2026.
-    const releaseTime = new Date("2026-10-23T00:00:00+11:00").getTime();
-
-    function updateCountdown() {
-      const remaining = releaseTime - Date.now();
-      const message = document.getElementById("timer-message");
-      const launchAction = document.getElementById("launch-action");
-
-      if (remaining <= 0) {
-        ["days", "hours", "minutes", "seconds"].forEach(id => {
-          document.getElementById(id).textContent = "00";
-        });
-        const dateParts = new Intl.DateTimeFormat("en-CA", {
-          timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit"
-        }).formatToParts(new Date());
-        const today = dateParts.filter(part => part.type !== "literal").map(part => part.value).join("-");
-        if (today >= "2026-10-26") {
-          message.textContent = "Full release day has arrived. Sign in to check which JPN services are available.";
-          if (launchAction) { launchAction.href = "/JPN/login/?welcome=1"; launchAction.textContent = "Open JPN account"; }
-        } else {
-          message.textContent = "Basic pre-orders are open. Full release is scheduled for Monday, 26 October 2026.";
-          if (launchAction) { launchAction.href = "/JPN/login/?welcome=1"; launchAction.textContent = "Pre-order Basic"; }
-        }
-        return;
-      }
-
-      const days = Math.floor(remaining / 86400000);
-      const hours = Math.floor((remaining % 86400000) / 3600000);
-      const minutes = Math.floor((remaining % 3600000) / 60000);
-      const seconds = Math.floor((remaining % 60000) / 1000);
-
-      document.getElementById("days").textContent = String(days).padStart(2, "0");
-      document.getElementById("hours").textContent = String(hours).padStart(2, "0");
-      document.getElementById("minutes").textContent = String(minutes).padStart(2, "0");
-      document.getElementById("seconds").textContent = String(seconds).padStart(2, "0");
-
-      message.textContent = "Time left until Basic pre-orders open";
-      if (launchAction) { launchAction.href = "/JPN/plans/"; launchAction.textContent = "View plans"; }
+    // Launch gates have been removed. Account creation and Basic requests are open now.
+    const launchAction = document.getElementById("launch-action");
+    const timerMessage = document.getElementById("timer-message");
+    if (timerMessage) timerMessage.textContent = "Account creation and Basic plan requests are open.";
+    if (launchAction) {
+      launchAction.href = "/JPN/login/?mode=signup";
+      launchAction.textContent = "Create account";
     }
-
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
   </script>
   <script src="/JPN/motion.js" defer></script>
 </body>
