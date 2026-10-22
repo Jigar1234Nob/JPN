@@ -306,7 +306,7 @@
             <li><span class="no">—</span><span class="no">Quick Flash tool</span></li>
           </ul>
 
-          <a class="button primary" href="/JPN/login/?welcome=1">Pre-order Basic Friday</a>
+          <a class="button primary" href="/JPN/#release" id="basic-preorder-button">Countdown to Friday</a>
         </article>
 
         <article class="plan featured">
@@ -363,6 +363,20 @@
 
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
+    const preorderAt = new Date("2026-10-23T16:00:00+11:00").getTime();
+    const preorderButton = document.getElementById("basic-preorder-button");
+    function updatePreorderButton() {
+      if (!preorderButton) return;
+      if (Date.now() >= preorderAt) {
+        preorderButton.href = "/JPN/login/?welcome=1";
+        preorderButton.textContent = "Pre-order Basic";
+      } else {
+        preorderButton.href = "/JPN/#release";
+        preorderButton.textContent = "Countdown to Friday";
+      }
+    }
+    updatePreorderButton();
+    setInterval(updatePreorderButton, 1000);
   </script>
   <script src="/JPN/motion.js" defer></script>
 </body>
