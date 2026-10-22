@@ -1,5 +1,7 @@
 # JPN backend
 
+JPN is operated by J-Private-Networking Group (full name: Jigar Private Networking Group).
+
 Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level security, manual paid entitlements, and private download links.
 
 ## API endpoints
