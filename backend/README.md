@@ -20,7 +20,7 @@ Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level s
 - GET/PATCH /api/admin/enterprise-inquiries - review and update inquiry status
 - PATCH /api/admin/users/:id/entitlement - legacy paid-access grant/revoke endpoint
 
-All protected endpoints require Authorization: Bearer <Supabase access token>. The API validates the token with Supabase Auth. Database calls use the same user's JWT, and admin RPC functions independently verify the caller's immutable app_metadata role. The admin account-invitation endpoint additionally requires SUPABASE_SERVICE_ROLE_KEY, kept only in the backend environment and never exposed to browser code. Invitation emails redirect to `/JPN/invitation/`, where the invited person verifies the link and sets a password before entering the dashboard.
+All protected endpoints require Authorization: Bearer <Supabase access token>. The API validates the token with Supabase Auth. Database calls use the same user's JWT, and admin RPC functions independently verify the caller's immutable app_metadata role. The account-invitation and account-suspension endpoints require SUPABASE_SERVICE_ROLE_KEY, kept only in the backend environment and never exposed to browser code. Invitation emails redirect to `/JPN/invitation/`, where the invited person verifies the link and sets a password before entering the dashboard.
 
 ## 1. Apply database migrations
 
