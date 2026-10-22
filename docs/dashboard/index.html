@@ -46,7 +46,7 @@ async function apiRequest(path,options={}) {
   const base=JPN_API_BASE.endsWith("/")?JPN_API_BASE.slice(0,-1):JPN_API_BASE;
   const response=await fetch(base+path,{...options,headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,...(options.headers||{})}});
   const payload=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(payload.error||"API request failed ("+response.status+")");
+  if(!response.ok){const requestError=new Error(payload.error||"Request failed.");requestError.status=response.status;requestError.code=payload.code;throw requestError;}
   return payload;
 }
 const say=(message,kind="info")=>{notice.textContent=message;notice.dataset.kind=kind};
