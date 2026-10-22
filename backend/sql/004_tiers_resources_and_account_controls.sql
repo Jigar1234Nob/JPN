@@ -61,7 +61,8 @@ create table if not exists public.jpn_enterprise_inquiries (
 );
 alter table public.jpn_enterprise_inquiries enable row level security;
 revoke all on public.jpn_enterprise_inquiries from anon, authenticated;
-grant insert on public.jpn_enterprise_inquiries to anon, authenticated;
+grant insert on public.jpn_enterprise_inquiries to anon;
+grant insert, select, update, delete on public.jpn_enterprise_inquiries to authenticated;
 drop policy if exists "Anyone can submit an Enterprise inquiry" on public.jpn_enterprise_inquiries;
 create policy "Anyone can submit an Enterprise inquiry"
 on public.jpn_enterprise_inquiries for insert to anon, authenticated
