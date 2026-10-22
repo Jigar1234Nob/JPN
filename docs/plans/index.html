@@ -404,7 +404,7 @@
       </div>
       <aside class="note">
         <strong>Launch note:</strong>
-        Basic pre-orders open Friday, 23 October 2026, at 4:00 PM Melbourne time, with full release on Monday, 26 October 2026. Basic is planned at $1.00/month. The pre-order link opens account sign-in and the Basic request flow; checkout is not connected yet, so this is not a paid order. The JPN VPN app is still in development.
+        Basic pre-orders are open now. Full release is Monday, 26 October 2026. Basic is planned at $1.00/month. The pre-order link opens account sign-in and records a Basic request for manual review; checkout is not connected yet, so this is not a paid order. The JPN VPN app is still in development.
         Premium and Enterprise access is arranged directly with JPN. Enterprise requires an inquiry and discussion; there is no public Enterprise checkout.
         Quick Flash is planned for Enterprise and is not available yet.
       </aside>
@@ -415,7 +415,6 @@
 
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
-    const preorderAt = new Date("2026-10-23T16:00:00+11:00").getTime();
     const preorderButton = document.getElementById("basic-preorder-button");
     function updatePreorderButton() {
       if (!preorderButton) return;
@@ -423,19 +422,11 @@
         timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit"
       }).formatToParts(new Date());
       const today = dateParts.filter(part => part.type !== "literal").map(part => part.value).join("-");
-      if (today >= "2026-10-26") {
-        preorderButton.href = "/JPN/login/?welcome=1";
-        preorderButton.textContent = "Open JPN account";
-      } else if (Date.now() >= preorderAt) {
-        preorderButton.href = "/JPN/login/?welcome=1";
-        preorderButton.textContent = "Pre-order Basic";
-      } else {
-        preorderButton.href = "/JPN/#release";
-        preorderButton.textContent = "Countdown to Friday";
-      }
+      preorderButton.href = "/JPN/login/?welcome=1";
+      preorderButton.textContent = today >= "2026-10-26" ? "Open JPN account" : "Pre-order Basic";
     }
     updatePreorderButton();
-    setInterval(updatePreorderButton, 1000);
+    setInterval(updatePreorderButton, 60000);
   </script>
   <script type="module">
     import { JPN_API_BASE } from "../supabase-config.js";
