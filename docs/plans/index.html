@@ -367,7 +367,14 @@
     const preorderButton = document.getElementById("basic-preorder-button");
     function updatePreorderButton() {
       if (!preorderButton) return;
-      if (Date.now() >= preorderAt) {
+      const dateParts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit"
+      }).formatToParts(new Date());
+      const today = dateParts.filter(part => part.type !== "literal").map(part => part.value).join("-");
+      if (today >= "2026-10-26") {
+        preorderButton.href = "/JPN/login/?welcome=1";
+        preorderButton.textContent = "Open JPN account";
+      } else if (Date.now() >= preorderAt) {
         preorderButton.href = "/JPN/login/?welcome=1";
         preorderButton.textContent = "Pre-order Basic";
       } else {
