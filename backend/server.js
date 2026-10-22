@@ -168,7 +168,7 @@ app.post("/api/downloads/:id/url", requireUser, async (req, res) => {
     res.json({ url: data.signedUrl, expires_in: 60, title: item.title });
   } catch (error) {
     console.error("Signed download URL failed:", error.message);
-    res.status(500).json({ error: "Could not prepare this download. Confirm the private file and download record exist." });
+    res.status(500).json({ error: "Could not prepare this download right now." });
   }
 });
 
@@ -319,7 +319,7 @@ app.get("/api/admin/enterprise-inquiries", requireUser, requireAdmin, async (req
 });
 
 app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) => {
-  if (!adminAuthClient) return res.status(503).json({ error: "Account invitations are not configured. Add SUPABASE_SERVICE_ROLE_KEY to the backend environment, then redeploy." });
+  if (!adminAuthClient) return res.status(503).json({ error: "Account invitations are temporarily unavailable. Please try again later." });
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return res.status(400).json({ error: "Enter a valid email address." });
@@ -367,7 +367,7 @@ app.patch("/api/admin/users/:id/entitlement", requireUser, requireAdmin, async (
   });
   if (error) {
     console.error("Admin entitlement update failed:", error.message);
-    return res.status(500).json({ error: error.message.includes("Admin access required") ? "Admin role is not configured correctly." : "Could not update membership right now." });
+    return res.status(500).json({ error: error.message.includes("Admin access required") ? "Administrator access could not be verified." : "Could not update membership right now." });
   }
   res.json({ entitlement: data?.[0] || null });
 });
