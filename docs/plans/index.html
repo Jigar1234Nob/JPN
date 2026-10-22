@@ -403,10 +403,8 @@
         </section>
       </div>
       <aside class="note">
-        <strong>Launch note:</strong>
-        Basic pre-orders are open now. Full release is Monday, 26 October 2026. Basic is planned at $1.00/month. The pre-order link opens account sign-in and records a Basic request for manual review; checkout is not connected yet, so this is not a paid order. The JPN VPN app is still in development.
-        Premium and Enterprise access is arranged directly with JPN. Enterprise requires an inquiry and discussion; there is no public Enterprise checkout.
-        Quick Flash is planned for Enterprise and is not available yet.
+        <strong>Manual plan requests:</strong>
+        Basic is planned at $1.00/month and Premium at $3.00/month. Selecting a plan takes you to account creation or sign-in, then to the Plans dashboard where you submit the request. Requests are reviewed manually. No online checkout, automatic payment, or automatic membership activation is enabled. Payment is arranged directly with JPN after review. The JPN VPN app and Quick Flash tool are still in development.
       </aside>
     </section>
   </main>
@@ -451,6 +449,7 @@
       document.getElementById("close-feedback").focus();
     };
     openButton.addEventListener("click", openEnterprise);
+    if (location.hash === "#enterprise-inquiry") openEnterprise();
     document.getElementById("close-enterprise").addEventListener("click", closeEnterprise);
     document.getElementById("close-feedback").addEventListener("click", () => { hideModal(feedback); if (!modal.hidden) document.getElementById("close-enterprise").focus(); else if (lastFocus?.focus) lastFocus.focus(); });
     document.getElementById("feedback-ok").addEventListener("click", () => { hideModal(feedback); if (!modal.hidden) document.getElementById("close-enterprise").focus(); else if (lastFocus?.focus) lastFocus.focus(); });
