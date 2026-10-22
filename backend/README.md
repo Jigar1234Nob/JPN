@@ -74,6 +74,10 @@ Replace object_path with the exact path of the uploaded file. The admin policy p
 
 An active paid entitlement is required for the API to list downloads and generate signed URLs. Storage RLS also checks the entitlement. Links expire after 60 seconds; links already generated remain valid until they expire.
 
+## Signup terms acceptance
+
+The signup page requires acceptance of `/JPN/terms/` and stores the terms version and timestamp in Supabase signup metadata. The disclosure explains that authorized operators with log access may be able to see IP addresses and that VPN/proxy services have their own provider terms. Metadata records the acknowledgement but is not a substitute for backend legal/compliance enforcement.
+
 ## Manual paid access, not billing
 
 There is no checkout, payment processor, or automatic billing. The admin opens /JPN/admin/ to invite accounts by email, searches for existing members, and clicks Mark as paid or Revoke paid access. An optional expiry date can be set. This writes an entitlement in the database; the browser cannot grant itself membership.
