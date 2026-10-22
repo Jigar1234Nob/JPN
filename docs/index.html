@@ -435,10 +435,10 @@
     <section class="section container" id="release">
       <div class="countdown-panel">
         <span class="eyebrow">Basic launch schedule</span>
-        <h2>Basic pre-orders open <span class="gradient">Friday.</span></h2>
-        <p>Pre-orders open Friday, 23 October 2026, at 4:00 PM Melbourne time. Full release is Monday, 26 October 2026.</p>
+        <h2>Basic pre-orders are <span class="gradient">open now.</span></h2>
+        <p>Pre-orders are open now. Full release is Monday, 26 October 2026.</p>
 
-        <div class="timer" role="timer" aria-label="Time remaining until release">
+        <div class="timer" role="timer" aria-label="Launch countdown" style="display:none">
           <div class="time-box"><strong id="days">00</strong><span>Days</span></div>
           <div class="time-box"><strong id="hours">00</strong><span>Hours</span></div>
           <div class="time-box"><strong id="minutes">00</strong><span>Minutes</span></div>
@@ -468,8 +468,8 @@
 
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    // 4:00 PM Melbourne time on 23 October 2026 (AEDT, UTC+11).
-    const releaseTime = new Date("2026-10-23T16:00:00+11:00").getTime();
+    // Basic pre-orders have been opened early; full release remains 26 October 2026.
+    const releaseTime = new Date("2026-10-23T00:00:00+11:00").getTime();
 
     function updateCountdown() {
       const remaining = releaseTime - Date.now();
