@@ -22,14 +22,14 @@ language sql
 stable
 security definer
 set search_path = ''
-as $
+as $jpn$
   select exists (
     select 1 from auth.users u
     where u.id = (select auth.uid())
       and coalesce(u.raw_app_meta_data->>'jpn_disabled', 'false') <> 'true'
       and (u.banned_until is null or u.banned_until <= now())
   );
-$;
+$jpn$;
 revoke all on function public.jpn_current_account_enabled() from public, anon;
 grant execute on function public.jpn_current_account_enabled() to authenticated;
 
