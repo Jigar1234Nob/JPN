@@ -127,6 +127,10 @@ begin
         case when target_plan='free' then null else entitlement_expires_at end,now(),auth.uid())
  on conflict(user_id) do update set paid=excluded.paid,plan=excluded.plan,
    expires_at=excluded.expires_at,updated_at=now(),updated_by=auth.uid();
+ update auth.users
+ set raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb)
+   || jsonb_build_object('jpn_plan_request_status', case when target_plan='free' then 'reviewed' else 'approved' end)
+ where id=target_user_id;
  return query select e.user_id,e.paid,e.plan,e.expires_at,e.updated_at
  from public.jpn_entitlements e where e.user_id=target_user_id;
 end;
