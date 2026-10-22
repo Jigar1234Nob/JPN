@@ -182,7 +182,7 @@ returns table(user_id uuid, paid boolean, plan text, expires_at timestamptz, upd
 language plpgsql security definer set search_path = ''
 as $$
 begin
- if (auth.jwt()->'app_metadata'->>'role') is distinct from 'admin' then
+ if (auth.jwt()->'app_metadata'->>'role') is distinct from 'admin' or not public.jpn_current_account_enabled() then
    raise exception 'Admin access required' using errcode='42501';
  end if;
  if target_plan not in ('free','basic','premium','enterprise') then
