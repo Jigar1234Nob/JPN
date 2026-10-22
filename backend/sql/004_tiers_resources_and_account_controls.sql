@@ -13,6 +13,61 @@ alter table public.jpn_downloads
   add column if not exists group_id uuid,
   add column if not exists github_url text;
 alter table public.jpn_downloads alter column object_path drop not null;
+
+-- Check the current account against live auth.users metadata, not just a possibly
+-- stale JWT. This makes suspension effective for existing database/storage sessions.
+create or replace function public.jpn_current_account_enabled()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $
+  select exists (
+    select 1 from auth.users u
+    where u.id = (select auth.uid())
+      and coalesce(u.raw_app_meta_data->>'jpn_disabled', 'false') <> 'true'
+      and (u.banned_until is null or u.banned_until <= now())
+  );
+$;
+revoke all on function public.jpn_current_account_enabled() from public, anon;
+grant execute on function public.jpn_current_account_enabled() to authenticated;
+
+drop policy if exists "Users can read their own JPN profile" on public.jpn_profiles;
+create policy "Users can read their own JPN profile" on public.jpn_profiles for select to authenticated
+using ((select auth.uid()) = id and public.jpn_current_account_enabled());
+drop policy if exists "Users can create their own JPN profile" on public.jpn_profiles;
+create policy "Users can create their own JPN profile" on public.jpn_profiles for insert to authenticated
+with check ((select auth.uid()) = id and public.jpn_current_account_enabled());
+drop policy if exists "Users can update their own JPN profile" on public.jpn_profiles;
+create policy "Users can update their own JPN profile" on public.jpn_profiles for update to authenticated
+using ((select auth.uid()) = id and public.jpn_current_account_enabled())
+with check ((select auth.uid()) = id and public.jpn_current_account_enabled());
+
+drop policy if exists "Users can read their own JPN entitlement" on public.jpn_entitlements;
+create policy "Users can read their own JPN entitlement" on public.jpn_entitlements for select to authenticated
+using ((select auth.uid()) = user_id and public.jpn_current_account_enabled());
+
+drop policy if exists "Paid members can list published JPN downloads" on public.jpn_downloads;
+create policy "Paid members can list published JPN downloads" on public.jpn_downloads for select to authenticated
+using (published = true and public.jpn_current_account_enabled() and exists (
+  select 1 from public.jpn_entitlements e
+  where e.user_id = (select auth.uid()) and e.paid = true
+    and (e.expires_at is null or e.expires_at > now())
+));
+
+drop policy if exists "Paid members can download JPN files" on storage.objects;
+create policy "Paid members can download JPN files" on storage.objects for select to authenticated
+using (
+  bucket_id = 'jpn-private-downloads'
+  and public.jpn_current_account_enabled()
+  and exists (
+    select 1 from public.jpn_entitlements e
+    where e.user_id = (select auth.uid()) and e.paid = true
+      and (e.expires_at is null or e.expires_at > now())
+  )
+);
+
 alter table public.jpn_downloads drop constraint if exists jpn_downloads_group_id_fkey;
 
 create table if not exists public.jpn_download_groups (
@@ -34,7 +89,7 @@ grant select, insert, update, delete on public.jpn_download_groups to authentica
 drop policy if exists "Paid members can list published JPN download groups" on public.jpn_download_groups;
 create policy "Paid members can list published JPN download groups"
 on public.jpn_download_groups for select to authenticated
-using (published and exists (
+using (published and public.jpn_current_account_enabled() and exists (
   select 1 from public.jpn_entitlements e
   where e.user_id=(select auth.uid()) and e.paid=true
     and (e.expires_at is null or e.expires_at>now())
