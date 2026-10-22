@@ -43,7 +43,7 @@ app.use(express.json({ limit: "20kb" }));
 app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false }));
 
 app.get("/api/health", (_req, res) => res.json({
-  ok: true, service: "jpn-api", version: "1.1.0", timestamp: new Date().toISOString()
+  ok: true, service: "jpn-api", version: "1.2.0", features: ["admin-invitations"], timestamp: new Date().toISOString()
 }));
 
 async function requireUser(req, res, next) {
