@@ -230,6 +230,8 @@
       font-size: .88rem;
     }
 
+    .footer-links { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+    .footer-links a:hover { color:var(--text); }
     .footer-inner {
       display: flex;
       justify-content: space-between;
@@ -357,7 +359,12 @@
   <footer>
     <div class="container footer-inner">
       <span>© <span id="year"></span> JPN · J-PRIVATE-NETWORK</span>
-      <a href="/JPN/">Back to homepage ↑</a>
+      <nav class="footer-links" aria-label="Public links">
+        <a href="/JPN/">Home</a>
+        <a href="/JPN/terms/">Terms of Service</a>
+        <a href="/JPN/privacy/">Privacy Notice</a>
+        <a href="/JPN/login/">Sign in</a>
+      </nav>
     </div>
   </footer>
 
