@@ -35,7 +35,7 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error("Origin is not allowed by CORS."));
   },
-  methods: ["GET", "PATCH", "POST", "OPTIONS"],
+  methods: ["GET", "PATCH", "POST", "DELETE", "OPTIONS"],
   allowedHeaders: ["Authorization", "Content-Type"],
   maxAge: 600
 }));
@@ -43,7 +43,7 @@ app.use(express.json({ limit: "20kb" }));
 app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false }));
 
 app.get("/api/health", (_req, res) => res.json({
-  ok: true, service: "jpn-api", version: "1.2.0", features: ["admin-invitations"], timestamp: new Date().toISOString()
+  ok: true, service: "jpn-api", version: "1.3.0", features: ["admin-invitations", "tier-management", "account-suspension", "resource-groups", "enterprise-inquiries"], timestamp: new Date().toISOString()
 }));
 
 async function requireUser(req, res, next) {
@@ -53,6 +53,9 @@ async function requireUser(req, res, next) {
     const { data, error } = await authClient.auth.getUser(match[1]);
     if (error || !data.user) return res.status(401).json({ error: "Your session is invalid or expired. Sign in again." });
     req.user = data.user;
+    if (data.user.app_metadata?.jpn_disabled === true || (data.user.banned_until && new Date(data.user.banned_until).getTime() > Date.now())) {
+      return res.status(403).json({ error: "This JPN account is disabled. Contact JPN support if you believe this is a mistake.", code: "ACCOUNT_DISABLED" });
+    }
     req.isAdmin = data.user.app_metadata?.role === "admin";
     req.userSupabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
       global: { headers: { Authorization: "Bearer " + match[1] } },
@@ -68,10 +71,10 @@ async function requireUser(req, res, next) {
 async function getEntitlement(req) {
   if (req.isAdmin) return { paid: true, expires_at: null, admin_override: true };
   const { data, error } = await req.userSupabase.from("jpn_entitlements")
-    .select("paid,expires_at,updated_at").eq("user_id", req.user.id).maybeSingle();
+    .select("paid,plan,expires_at,updated_at").eq("user_id", req.user.id).maybeSingle();
   if (error) throw error;
   const active = !!data?.paid && (!data.expires_at || new Date(data.expires_at).getTime() > Date.now());
-  return { paid: active, expires_at: data?.expires_at || null, updated_at: data?.updated_at || null, admin_override: false };
+  return { paid: active, plan: active ? (data?.plan || "basic") : "free", expires_at: data?.expires_at || null, updated_at: data?.updated_at || null, admin_override: false };
 }
 
 function requireAdmin(req, res, next) {
@@ -131,9 +134,12 @@ app.get("/api/downloads", requireUser, async (req, res) => {
     const entitlement = await getEntitlement(req);
     if (!entitlement.paid) return res.status(403).json({ error: "An active paid membership is required to access downloads.", code: "PAID_MEMBERSHIP_REQUIRED" });
     const { data, error } = await req.userSupabase.from("jpn_downloads")
-      .select("id,title,description,version,created_at").eq("published", true).order("created_at", { ascending: false });
+      .select("id,title,description,version,group_id,github_url,created_at").eq("published", true).order("created_at", { ascending: false });
     if (error) throw error;
-    res.json({ downloads: data || [], entitlement });
+    const { data: groups, error: groupError } = await req.userSupabase.from("jpn_download_groups")
+      .select("id,name,description,sort_order").eq("published", true).order("sort_order", { ascending: true });
+    if (groupError) throw groupError;
+    res.json({ downloads: data || [], groups: groups || [], entitlement });
   } catch (error) {
     if (res.headersSent) return;
     console.error("Download list failed:", error.message);
@@ -146,9 +152,15 @@ app.post("/api/downloads/:id/url", requireUser, async (req, res) => {
     const entitlement = await getEntitlement(req);
     if (!entitlement.paid) return res.status(403).json({ error: "An active paid membership is required to download files.", code: "PAID_MEMBERSHIP_REQUIRED" });
     const { data: item, error } = await req.userSupabase.from("jpn_downloads")
-      .select("id,title,bucket,object_path,published").eq("id", req.params.id).eq("published", true).maybeSingle();
+      .select("id,title,bucket,object_path,github_url,published").eq("id", req.params.id).eq("published", true).maybeSingle();
     if (error) throw error;
     if (!item) return res.status(404).json({ error: "Download not found." });
+    if (item.github_url) {
+      let parsed;
+      try { parsed = new URL(item.github_url); } catch { return res.status(500).json({ error: "This release link is not configured correctly." }); }
+      if (parsed.protocol !== "https:" || !["github.com", "githubusercontent.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com"].includes(parsed.hostname) && !parsed.hostname.endsWith(".githubusercontent.com")) return res.status(500).json({ error: "This release link is not configured correctly." });
+      return res.json({ url: parsed.toString(), expires_in: null, title: item.title, external: true });
+    }
     const { data, error: storageError } = await req.userSupabase.storage.from(item.bucket).createSignedUrl(item.object_path, 60);
     if (storageError) throw storageError;
     res.json({ url: data.signedUrl, expires_in: 60, title: item.title });
@@ -156,6 +168,145 @@ app.post("/api/downloads/:id/url", requireUser, async (req, res) => {
     console.error("Signed download URL failed:", error.message);
     res.status(500).json({ error: "Could not prepare this download. Confirm the private file and download record exist." });
   }
+});
+
+app.post("/api/inquiries/enterprise", async (req, res) => {
+  const name = String(req.body?.name || "").trim();
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const organization = String(req.body?.organization || "").trim();
+  const message = String(req.body?.message || "").trim();
+  if (name.length < 1 || name.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
+      organization.length > 160 || message.length < 10 || message.length > 4000) {
+    return res.status(400).json({ error: "Check the required fields and try again." });
+  }
+  try {
+    const { error } = await authClient.from("jpn_enterprise_inquiries").insert({ name, email, organization, message });
+    if (error) throw error;
+    return res.status(201).json({ message: "Your Enterprise inquiry has been received. The JPN team can review it and contact you." });
+  } catch (error) {
+    console.error("Enterprise inquiry submission failed:", error.message);
+    return res.status(500).json({ error: "Your inquiry could not be submitted right now. Please try again later." });
+  }
+});
+
+app.patch("/api/admin/users/:id/plan", requireUser, requireAdmin, async (req, res) => {
+  const userId = String(req.params.id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) return res.status(400).json({ error: "A valid account ID is required." });
+  const plan = String(req.body?.plan || "").toLowerCase();
+  if (!["free", "basic", "premium", "enterprise"].includes(plan)) return res.status(400).json({ error: "Choose Free, Basic, Premium, or Enterprise." });
+  let expiresAt = null;
+  if (req.body.expires_at) {
+    const date = new Date(req.body.expires_at);
+    if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) return res.status(400).json({ error: "Expiry must be a future date." });
+    expiresAt = date.toISOString();
+  }
+  const { data, error } = await req.userSupabase.rpc("jpn_admin_set_plan", { target_user_id: userId, target_plan: plan, entitlement_expires_at: expiresAt });
+  if (error) {
+    console.error("Admin plan update failed:", error.message);
+    return res.status(500).json({ error: error.message.includes("Admin access required") ? "Admin access could not be verified." : "Could not update the membership plan. Contact the site administrator if this continues." });
+  }
+  res.json({ entitlement: data?.[0] || null });
+});
+
+app.patch("/api/admin/users/:id/disabled", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Account controls are temporarily unavailable. Contact the site administrator." });
+  const userId = String(req.params.id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) return res.status(400).json({ error: "A valid account ID is required." });
+  if (userId === req.user.id) return res.status(400).json({ error: "You cannot disable your own administrator account." });
+  if (typeof req.body?.disabled !== "boolean") return res.status(400).json({ error: "Choose whether the account should be enabled or disabled." });
+  try {
+    const { data: current, error: lookupError } = await adminAuthClient.auth.admin.getUserById(userId);
+    if (lookupError || !current?.user) return res.status(404).json({ error: "Account not found." });
+    if (current.user.app_metadata?.role === "admin" && req.body.disabled) return res.status(400).json({ error: "Administrator accounts cannot be disabled from this screen." });
+    const appMetadata = { ...(current.user.app_metadata || {}), jpn_disabled: req.body.disabled };
+    const { error } = await adminAuthClient.auth.admin.updateUserById(userId, {
+      ban_duration: req.body.disabled ? "876000h" : "none",
+      app_metadata: appMetadata
+    });
+    if (error) throw error;
+    res.json({ disabled: req.body.disabled, message: req.body.disabled ? "Account disabled. New sign-ins and protected API access are blocked." : "Account enabled again." });
+  } catch (error) {
+    console.error("Admin account suspension failed:", error.message);
+    res.status(500).json({ error: "Could not change account status. Check the backend account-control configuration." });
+  }
+});
+
+app.get("/api/admin/download-groups", requireUser, requireAdmin, async (req, res) => {
+  const { data, error } = await req.userSupabase.from("jpn_download_groups").select("id,name,description,sort_order,published").order("sort_order", { ascending: true });
+  if (error) { console.error("Admin groups read failed:", error.message); return res.status(500).json({ error: "Could not load download groups. Apply the latest JPN database migration." }); }
+  res.json({ groups: data || [] });
+});
+app.post("/api/admin/download-groups", requireUser, requireAdmin, async (req, res) => {
+  const name = String(req.body?.name || "").trim(), description = String(req.body?.description || "").trim();
+  const sort_order = Number.isInteger(req.body?.sort_order) ? req.body.sort_order : 0;
+  if (!name || name.length > 80 || description.length > 500) return res.status(400).json({ error: "Group name is required (80 characters max); description must be 500 characters or fewer." });
+  const { data, error } = await req.userSupabase.from("jpn_download_groups").insert({ name, description, sort_order, published: true }).select("id,name,description,sort_order,published").single();
+  if (error) { console.error("Admin group create failed:", error.message); return res.status(500).json({ error: "Could not create the group. Apply the latest JPN database migration." }); }
+  res.status(201).json({ group: data });
+});
+app.patch("/api/admin/download-groups/:id", requireUser, requireAdmin, async (req, res) => {
+  const patch = {};
+  if (typeof req.body?.name === "string" && req.body.name.trim() && req.body.name.trim().length <= 80) patch.name = req.body.name.trim();
+  if (typeof req.body?.description === "string" && req.body.description.length <= 500) patch.description = req.body.description.trim();
+  if (typeof req.body?.published === "boolean") patch.published = req.body.published;
+  if (Number.isInteger(req.body?.sort_order)) patch.sort_order = req.body.sort_order;
+  if (!Object.keys(patch).length) return res.status(400).json({ error: "No valid group changes were provided." });
+  patch.updated_at = new Date().toISOString();
+  const { data, error } = await req.userSupabase.from("jpn_download_groups").update(patch).eq("id", req.params.id).select("id,name,description,sort_order,published").maybeSingle();
+  if (error || !data) { console.error("Admin group update failed:", error?.message); return res.status(500).json({ error: "Could not update this group." }); }
+  res.json({ group: data });
+});
+app.delete("/api/admin/download-groups/:id", requireUser, requireAdmin, async (req, res) => {
+  const { error } = await req.userSupabase.from("jpn_download_groups").delete().eq("id", req.params.id);
+  if (error) { console.error("Admin group delete failed:", error.message); return res.status(500).json({ error: "Could not delete this group." }); }
+  res.json({ success: true });
+});
+app.get("/api/admin/downloads", requireUser, requireAdmin, async (req, res) => {
+  const { data, error } = await req.userSupabase.from("jpn_downloads").select("id,title,description,version,group_id,github_url,published,created_at").order("created_at", { ascending: false });
+  if (error) { console.error("Admin downloads read failed:", error.message); return res.status(500).json({ error: "Could not load release builds. Apply the latest JPN database migration." }); }
+  res.json({ downloads: data || [] });
+});
+app.post("/api/admin/downloads", requireUser, requireAdmin, async (req, res) => {
+  const title = String(req.body?.title || "").trim(), description = String(req.body?.description || "").trim();
+  const version = String(req.body?.version || "").trim(), group_id = String(req.body?.group_id || "");
+  const github_url = String(req.body?.github_url || "").trim();
+  const id = String(req.body?.id || title.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")).slice(0,80);
+  let parsed;
+  try { parsed = new URL(github_url); } catch { return res.status(400).json({ error: "Enter a valid HTTPS GitHub release or asset URL." }); }
+  if (parsed.protocol !== "https:" || !(parsed.hostname === "github.com" || parsed.hostname.endsWith(".githubusercontent.com") || parsed.hostname === "objects.githubusercontent.com" || parsed.hostname === "release-assets.githubusercontent.com")) return res.status(400).json({ error: "Build URLs must point to GitHub over HTTPS." });
+  if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(id) || !title || title.length > 120 || description.length > 1000 || version.length > 40) return res.status(400).json({ error: "Check the build title, version, description, and ID." });
+  const { data: group, error: groupError } = await req.userSupabase.from("jpn_download_groups").select("id").eq("id", group_id).maybeSingle();
+  if (groupError || !group) return res.status(400).json({ error: "Choose a valid download group." });
+  const { data, error } = await req.userSupabase.from("jpn_downloads").insert({ id, title, description, version, group_id, github_url: parsed.toString(), object_path: null, published: true }).select("id,title,description,version,group_id,github_url,published").single();
+  if (error) { console.error("Admin build create failed:", error.message); return res.status(500).json({ error: "Could not publish this build. Check that the latest JPN database migration has been applied." }); }
+  res.status(201).json({ download: data });
+});
+app.patch("/api/admin/downloads/:id", requireUser, requireAdmin, async (req, res) => {
+  const patch = {};
+  if (typeof req.body?.published === "boolean") patch.published = req.body.published;
+  if (typeof req.body?.title === "string" && req.body.title.trim() && req.body.title.trim().length <= 120) patch.title = req.body.title.trim();
+  if (typeof req.body?.description === "string" && req.body.description.length <= 1000) patch.description = req.body.description.trim();
+  if (typeof req.body?.version === "string" && req.body.version.length <= 40) patch.version = req.body.version.trim();
+  if (typeof req.body?.group_id === "string") patch.group_id = req.body.group_id || null;
+  if (typeof req.body?.github_url === "string") {
+    try { const parsed = new URL(req.body.github_url); if (parsed.protocol !== "https:" || !(parsed.hostname === "github.com" || parsed.hostname.endsWith(".githubusercontent.com") || parsed.hostname === "objects.githubusercontent.com" || parsed.hostname === "release-assets.githubusercontent.com")) throw new Error(); patch.github_url = parsed.toString(); }
+    catch { return res.status(400).json({ error: "Build URLs must point to GitHub over HTTPS." }); }
+  }
+  if (!Object.keys(patch).length) return res.status(400).json({ error: "No valid build changes were provided." });
+  patch.updated_at = new Date().toISOString();
+  const { data, error } = await req.userSupabase.from("jpn_downloads").update(patch).eq("id", req.params.id).select("id,title,description,version,group_id,github_url,published").maybeSingle();
+  if (error || !data) { console.error("Admin build update failed:", error?.message); return res.status(500).json({ error: "Could not update this build." }); }
+  res.json({ download: data });
+});
+app.delete("/api/admin/downloads/:id", requireUser, requireAdmin, async (req, res) => {
+  const { error } = await req.userSupabase.from("jpn_downloads").delete().eq("id", req.params.id);
+  if (error) { console.error("Admin build delete failed:", error.message); return res.status(500).json({ error: "Could not remove this build." }); }
+  res.json({ success: true });
+});
+app.get("/api/admin/enterprise-inquiries", requireUser, requireAdmin, async (req, res) => {
+  const { data, error } = await req.userSupabase.from("jpn_enterprise_inquiries").select("id,name,email,organization,message,status,created_at").order("created_at", { ascending: false }).limit(100);
+  if (error) { console.error("Enterprise inquiries read failed:", error.message); return res.status(500).json({ error: "Could not load Enterprise inquiries." }); }
+  res.json({ inquiries: data || [] });
 });
 
 app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) => {
