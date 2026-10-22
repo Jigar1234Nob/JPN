@@ -132,7 +132,7 @@ app.get("/api/entitlement", requireUser, async (req, res) => {
 app.get("/api/downloads", requireUser, async (req, res) => {
   try {
     const entitlement = await getEntitlement(req);
-    if (!entitlement.paid) return res.status(403).json({ error: "An active paid membership is required to access downloads.", code: "PAID_MEMBERSHIP_REQUIRED" });
+    if (!entitlement.admin_override && (!entitlement.paid || !["premium", "enterprise"].includes(String(entitlement.plan || "").toLowerCase()))) return res.status(403).json({ error: "Downloads require an active Premium or Enterprise membership.", code: "PREMIUM_MEMBERSHIP_REQUIRED" });
     const { data, error } = await req.userSupabase.from("jpn_downloads")
       .select("id,title,description,version,group_id,github_url,created_at").eq("published", true).order("created_at", { ascending: false });
     if (error) throw error;
@@ -152,7 +152,7 @@ app.get("/api/downloads", requireUser, async (req, res) => {
 app.post("/api/downloads/:id/url", requireUser, async (req, res) => {
   try {
     const entitlement = await getEntitlement(req);
-    if (!entitlement.paid) return res.status(403).json({ error: "An active paid membership is required to download files.", code: "PAID_MEMBERSHIP_REQUIRED" });
+    if (!entitlement.admin_override && (!entitlement.paid || !["premium", "enterprise"].includes(String(entitlement.plan || "").toLowerCase()))) return res.status(403).json({ error: "Downloads require an active Premium or Enterprise membership.", code: "PREMIUM_MEMBERSHIP_REQUIRED" });
     const { data: item, error } = await req.userSupabase.from("jpn_downloads")
       .select("id,title,bucket,object_path,github_url,published").eq("id", req.params.id).eq("published", true).maybeSingle();
     if (error) throw error;
