@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080d1b">
-  <meta name="description" content="Compare JPN Basic, Premium and Ultimate monthly plans.">
+  <meta name="description" content="Compare JPN Basic, Premium and Enterprise monthly plans.">
   <title>Plans | JPN</title>
   <link rel="icon" type="image/svg+xml" href="/JPN/favicon.svg">
 
@@ -339,7 +339,7 @@
         </article>
 
         <article class="plan">
-          <h2>Ultimate</h2>
+          <h2>Enterprise</h2>
           <p class="description">The complete JPN package with every planned feature.</p>
 
           <div class="price">$4.50 <small>/ month</small></div>
@@ -352,15 +352,30 @@
             <li><span class="soon">◷</span><span>Quick Flash tool for different OSes <strong class="soon">· Coming soon</strong></span></li>
           </ul>
 
-          <a class="button" href="/JPN/#release">Coming soon</a>
+          <a class="button" href="#enterprise-inquiry">Inquire about Enterprise</a>
         </article>
       </div>
 
+      <section class="container" id="enterprise-inquiry" style="max-width:850px;margin:0 auto 34px">
+        <article class="note">
+          <span class="eyebrow">For teams and organizations</span>
+          <h2 style="font-size:1.7rem;margin:10px 0">Enterprise inquiry</h2>
+          <p>Tell us what your organization needs. Enterprise access is discussed directly with JPN; submitting this form does not create an account or activate a plan.</p>
+          <form id="enterprise-form" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px">
+            <label>Name<input name="name" required maxlength="120" autocomplete="name" placeholder="Your name" style="display:block;width:100%;margin-top:6px"></label>
+            <label>Work email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@organization.com" style="display:block;width:100%;margin-top:6px"></label>
+            <label style="grid-column:1/-1">Organization<input name="organization" maxlength="160" autocomplete="organization" placeholder="Organization name (optional)" style="display:block;width:100%;margin-top:6px"></label>
+            <label style="grid-column:1/-1">What are you looking for?<textarea name="message" required minlength="10" maxlength="4000" rows="4" placeholder="Number of users, use case, requirements…" style="display:block;width:100%;margin-top:6px"></textarea></label>
+            <div id="enterprise-status" role="status" aria-live="polite" style="grid-column:1/-1;color:var(--muted)"></div>
+            <button class="button primary" id="enterprise-submit" type="submit" style="grid-column:1/-1">Send Enterprise inquiry</button>
+          </form>
+        </article>
+      </section>
       <aside class="note">
         <strong>Launch note:</strong>
         Basic pre-orders open Friday, 23 October 2026, at 4:00 PM Melbourne time, with full release on Monday, 26 October 2026. Basic is planned at $1.00/month. The pre-order link opens account sign-in and the Basic request flow; checkout is not connected yet, so this is not a paid order. The JPN VPN app is still in development.
-        Subscription checkout and account management have not been connected yet.
-        Quick Flash is planned for Ultimate and is not available yet.
+        Premium and Enterprise access is arranged directly with JPN. Enterprise requires an inquiry and discussion; there is no public Enterprise checkout.
+        Quick Flash is planned for Enterprise and is not available yet.
       </aside>
     </section>
   </main>
@@ -390,6 +405,26 @@
     }
     updatePreorderButton();
     setInterval(updatePreorderButton, 1000);
+  </script>
+  <script type="module">
+    import { JPN_API_BASE } from "../supabase-config.js";
+    const form = document.getElementById("enterprise-form");
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = document.getElementById("enterprise-submit");
+      const status = document.getElementById("enterprise-status");
+      if (!JPN_API_BASE) { status.textContent = "The inquiry form is temporarily unavailable. Please try again later."; return; }
+      button.disabled = true; button.textContent = "Sending…"; status.textContent = "Submitting your inquiry…";
+      const values = Object.fromEntries(new FormData(form).entries());
+      try {
+        const base = JPN_API_BASE.endsWith("/") ? JPN_API_BASE.slice(0, -1) : JPN_API_BASE;
+        const response = await fetch(base + "/api/inquiries/enterprise", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Your inquiry could not be submitted.");
+        form.reset(); status.textContent = data.message || "Your inquiry has been received."; status.style.color = "var(--cyan)";
+      } catch (error) { status.textContent = error.message || "Your inquiry could not be submitted right now."; status.style.color = "#ffb4b4"; }
+      finally { button.disabled = false; button.textContent = "Send Enterprise inquiry"; }
+    });
   </script>
   <script src="/JPN/motion.js" defer></script>
 </body>
