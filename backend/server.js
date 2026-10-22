@@ -10,6 +10,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY. Configure backend/.env.");
   process.exit(1);
@@ -17,6 +18,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 });
+const adminAuthClient = SUPABASE_SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+}) : null;
 const allowedOrigins = (process.env.FRONTEND_ORIGINS ||
   "https://jigar1234nob.github.io,http://localhost:5500,http://127.0.0.1:5500")
   .split(",").map(value => value.trim()).filter(Boolean);
@@ -151,6 +155,27 @@ app.post("/api/downloads/:id/url", requireUser, async (req, res) => {
   } catch (error) {
     console.error("Signed download URL failed:", error.message);
     res.status(500).json({ error: "Could not prepare this download. Confirm the private file and download record exist." });
+  }
+});
+
+app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Account invitations are not configured. Add SUPABASE_SERVICE_ROLE_KEY to the backend environment, then redeploy." });
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return res.status(400).json({ error: "Enter a valid email address." });
+  }
+  try {
+    const { data, error } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: "https://jigar1234nob.github.io/JPN/dashboard/?welcome=1"
+    });
+    if (error) {
+      const duplicate = /already|registered|exists/i.test(error.message || "");
+      return res.status(duplicate ? 409 : 400).json({ error: duplicate ? "An account already exists for that email address." : "Could not send the account invitation. Check Supabase Auth email settings." });
+    }
+    return res.status(201).json({ user: { id: data.user?.id || null, email: data.user?.email || email }, message: "Invitation sent. The user must follow the email link to finish setting up their account." });
+  } catch (error) {
+    console.error("Admin invitation failed:", error.message);
+    return res.status(500).json({ error: "Could not create the account invitation." });
   }
 });
 
