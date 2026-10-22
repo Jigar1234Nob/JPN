@@ -270,7 +270,27 @@
 @media(max-width:600px){.site-footer-inner{width:calc(100% - 32px);align-items:flex-start;flex-direction:column;gap:10px}.site-footer-links{justify-content:flex-start;gap:8px 16px}}
 
 </style>
-  <style>@media(max-width:600px){#enterprise-form{grid-template-columns:1fr!important}#enterprise-form label{grid-column:1/-1!important}}</style>
+  <style>
+    .enterprise-modal[hidden],.feedback-modal[hidden]{display:none!important}
+    .enterprise-modal,.feedback-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,28px);background:rgba(3,7,18,.78);backdrop-filter:blur(12px);overflow-y:auto}
+    .enterprise-dialog,.feedback-dialog{position:relative;width:min(760px,100%);max-height:min(92dvh,900px);overflow-y:auto;padding:clamp(20px,4vw,38px);border:1px solid rgba(83,217,240,.25);border-radius:clamp(20px,3vw,30px);background:linear-gradient(145deg,#141c30,#0b1020);box-shadow:0 28px 100px #0009}
+    .enterprise-dialog h2,.feedback-dialog h2{font-size:clamp(1.45rem,3vw,2rem);margin:8px 0 10px}
+    .enterprise-dialog p,.feedback-dialog p{color:var(--muted);line-height:1.65}
+    .enterprise-close{position:absolute;right:14px;top:14px;width:44px;height:44px;border:1px solid #ffffff24;border-radius:15px;background:#ffffff0a;color:var(--text);font-size:1.45rem;cursor:pointer}
+    #enterprise-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px}
+    #enterprise-form label{display:block;min-width:0;font-weight:600;font-size:.94rem}
+    #enterprise-form input,#enterprise-form textarea{display:block;width:100%;min-width:0;margin-top:8px;padding:15px 16px;border:1px solid #ffffff24;border-radius:16px;background:#080d1b;color:var(--text);font:inherit;font-size:16px;line-height:1.45;outline:none;transition:border-color .18s,box-shadow .18s}
+    #enterprise-form input{min-height:54px}
+    #enterprise-form textarea{min-height:140px;resize:vertical}
+    #enterprise-form input:focus,#enterprise-form textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #53d9f022}
+    #enterprise-form input::placeholder,#enterprise-form textarea::placeholder{color:#8994aa}
+    #enterprise-form .full-row{grid-column:1/-1}
+    .enterprise-response{padding:16px;border-radius:16px;background:#53d9f00c;border:1px solid #53d9f033}
+    body.modal-open{overflow:hidden}
+    @media(max-width:620px){#enterprise-form{grid-template-columns:minmax(0,1fr)}#enterprise-form .full-row{grid-column:1} .enterprise-dialog,.feedback-dialog{border-radius:22px}#enterprise-form input,#enterprise-form textarea{padding:15px;min-height:54px}}
+    @media(min-width:621px) and (max-width:850px){.enterprise-dialog{width:min(700px,100%)}#enterprise-form{gap:14px}}
+    @media(prefers-reduced-motion:reduce){.enterprise-modal,.feedback-modal{backdrop-filter:none}}
+  </style>
   <link rel="stylesheet" href="/JPN/motion.css">
 <link rel="stylesheet" href="/JPN/theme.css">
 <link rel="stylesheet" href="/JPN/home-theme.css">
@@ -353,25 +373,35 @@
             <li><span class="soon">◷</span><span>Quick Flash tool for different OSes <strong class="soon">· Coming soon</strong></span></li>
           </ul>
 
-          <a class="button" href="#enterprise-inquiry">Inquire about Enterprise</a>
+          <button class="button" type="button" id="open-enterprise">Inquire about Enterprise</button>
         </article>
       </div>
 
-      <section class="container" id="enterprise-inquiry" style="max-width:850px;margin:0 auto 34px">
-        <article class="note">
+      <div class="enterprise-modal" id="enterprise-modal" hidden>
+        <section class="enterprise-dialog" role="dialog" aria-modal="true" aria-labelledby="enterprise-title" aria-describedby="enterprise-description">
+          <button class="enterprise-close" type="button" id="close-enterprise" aria-label="Close Enterprise inquiry">×</button>
           <span class="eyebrow">For teams and organizations</span>
-          <h2 style="font-size:1.7rem;margin:10px 0">Enterprise inquiry</h2>
-          <p>Tell us what your organization needs. Enterprise access is discussed directly with JPN; submitting this form does not create an account or activate a plan.</p>
-          <form id="enterprise-form" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px">
-            <label>Name<input name="name" required maxlength="120" autocomplete="name" placeholder="Your name" style="display:block;width:100%;margin-top:6px"></label>
-            <label>Work email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@organization.com" style="display:block;width:100%;margin-top:6px"></label>
-            <label style="grid-column:1/-1">Organization<input name="organization" maxlength="160" autocomplete="organization" placeholder="Organization name (optional)" style="display:block;width:100%;margin-top:6px"></label>
-            <label style="grid-column:1/-1">What are you looking for?<textarea name="message" required minlength="10" maxlength="4000" rows="4" placeholder="Number of users, use case, requirements…" style="display:block;width:100%;margin-top:6px"></textarea></label>
-            <div id="enterprise-status" role="status" aria-live="polite" style="grid-column:1/-1;color:var(--muted)"></div>
-            <button class="button primary" id="enterprise-submit" type="submit" style="grid-column:1/-1">Send Enterprise inquiry</button>
+          <h2 id="enterprise-title">Inquire about Enterprise</h2>
+          <p id="enterprise-description">Tell us what your organization needs. This form sends an inquiry for review; it does not create an account or activate a plan. The JPN team aims to contact you by email within <strong>3–5 business days</strong>.</p>
+          <form id="enterprise-form">
+            <label>Name<input name="name" required maxlength="120" autocomplete="name" placeholder="Your name"></label>
+            <label>Work email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@organization.com"></label>
+            <label class="full-row">Organization<input name="organization" maxlength="160" autocomplete="organization" placeholder="Organization name (optional)"></label>
+            <label class="full-row">What are you looking for?<textarea name="message" required minlength="10" maxlength="4000" rows="5" placeholder="Number of users, use case, requirements…"></textarea></label>
+            <p class="full-row" style="font-size:.86rem;margin:0">By submitting, you agree that JPN may use these details to respond to your Enterprise inquiry. See our <a href="/JPN/privacy/" target="_blank" rel="noopener">Privacy Notice</a>.</p>
+            <button class="button primary full-row" id="enterprise-submit" type="submit">Send Enterprise inquiry</button>
           </form>
-        </article>
-      </section>
+        </section>
+      </div>
+      <div class="feedback-modal" id="feedback-modal" hidden>
+        <section class="feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="feedback-title" aria-describedby="feedback-message">
+          <button class="enterprise-close" type="button" id="close-feedback" aria-label="Close message">×</button>
+          <span class="eyebrow" id="feedback-eyebrow">Enterprise inquiry</span>
+          <h2 id="feedback-title">Inquiry status</h2>
+          <p id="feedback-message" role="status" aria-live="polite"></p>
+          <div class="form-actions"><button class="button primary" type="button" id="feedback-ok">Got it</button></div>
+        </section>
+      </div>
       <aside class="note">
         <strong>Launch note:</strong>
         Basic pre-orders open Friday, 23 October 2026, at 4:00 PM Melbourne time, with full release on Monday, 26 October 2026. Basic is planned at $1.00/month. The pre-order link opens account sign-in and the Basic request flow; checkout is not connected yet, so this is not a paid order. The JPN VPN app is still in development.
@@ -410,23 +440,72 @@
   <script type="module">
     import { JPN_API_BASE } from "../supabase-config.js";
     const form = document.getElementById("enterprise-form");
+    const modal = document.getElementById("enterprise-modal");
+    const feedback = document.getElementById("feedback-modal");
+    const submitButton = document.getElementById("enterprise-submit");
+    const openButton = document.getElementById("open-enterprise");
+    let lastFocus = null;
+    const showModal = (element) => { element.hidden = false; document.body.classList.add("modal-open"); };
+    const hideModal = (element) => {
+      element.hidden = true;
+      if (modal.hidden && feedback.hidden) document.body.classList.remove("modal-open");
+    };
+    const openEnterprise = () => {
+      lastFocus = document.activeElement;
+      showModal(modal);
+      document.getElementById("close-enterprise").focus();
+    };
+    const closeEnterprise = () => { hideModal(modal); if (lastFocus?.focus) lastFocus.focus(); };
+    const showFeedback = (success, message) => {
+      document.getElementById("feedback-eyebrow").textContent = success ? "Request received" : "Could not submit";
+      document.getElementById("feedback-title").textContent = success ? "Enterprise inquiry sent" : "Submission unsuccessful";
+      document.getElementById("feedback-message").textContent = message;
+      document.getElementById("feedback-title").style.color = success ? "var(--cyan)" : "#ffb4b4";
+      showModal(feedback);
+      document.getElementById("close-feedback").focus();
+    };
+    openButton.addEventListener("click", openEnterprise);
+    document.getElementById("close-enterprise").addEventListener("click", closeEnterprise);
+    document.getElementById("close-feedback").addEventListener("click", () => { hideModal(feedback); if (!modal.hidden) document.getElementById("close-enterprise").focus(); else if (lastFocus?.focus) lastFocus.focus(); });
+    document.getElementById("feedback-ok").addEventListener("click", () => { hideModal(feedback); if (!modal.hidden) document.getElementById("close-enterprise").focus(); else if (lastFocus?.focus) lastFocus.focus(); });
+    modal.addEventListener("click", event => { if (event.target === modal) closeEnterprise(); });
+    feedback.addEventListener("click", event => { if (event.target === feedback) { hideModal(feedback); if (!modal.hidden) document.getElementById("close-enterprise").focus(); else if (lastFocus?.focus) lastFocus.focus(); } });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        if (!feedback.hidden) { hideModal(feedback); if (!modal.hidden) document.getElementById("close-enterprise").focus(); else if (lastFocus?.focus) lastFocus.focus(); }
+        else if (!modal.hidden) closeEnterprise();
+      }
+    });
     form.addEventListener("submit", async event => {
       event.preventDefault();
-      const button = document.getElementById("enterprise-submit");
-      const status = document.getElementById("enterprise-status");
-      if (!JPN_API_BASE) { status.textContent = "The inquiry form is temporarily unavailable. Please try again later."; return; }
-      button.disabled = true; button.textContent = "Sending…"; status.textContent = "Submitting your inquiry…";
+      if (!form.reportValidity()) return;
+      if (!JPN_API_BASE) {
+        showFeedback(false, "The inquiry service is temporarily unavailable. Please try again later.");
+        return;
+      }
+      submitButton.disabled = true;
+      submitButton.textContent = "Sending…";
       const values = Object.fromEntries(new FormData(form).entries());
       try {
         const base = JPN_API_BASE.endsWith("/") ? JPN_API_BASE.slice(0, -1) : JPN_API_BASE;
-        const response = await fetch(base + "/api/inquiries/enterprise", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) });
+        const response = await fetch(base + "/api/inquiries/enterprise", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values)
+        });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "Your inquiry could not be submitted.");
-        form.reset(); status.textContent = data.message || "Your inquiry has been received."; status.style.color = "var(--cyan)";
-      } catch (error) { status.textContent = error.message || "Your inquiry could not be submitted right now."; status.style.color = "#ffb4b4"; }
-      finally { button.disabled = false; button.textContent = "Send Enterprise inquiry"; }
+        if (!response.ok) throw new Error(data.error || "Your inquiry could not be submitted. Please try again.");
+        form.reset();
+        hideModal(modal);
+        showFeedback(true, "Your inquiry was submitted successfully. The JPN team aims to contact you by email within 3–5 business days. This is an inquiry only; Enterprise access is not activated automatically.");
+      } catch (error) {
+        showFeedback(false, error.message || "Your inquiry could not be submitted right now. Please try again later.");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Send Enterprise inquiry";
+      }
     });
   </script>
-  <script src="/JPN/motion.js" defer></script>
+    <script src="/JPN/motion.js" defer></script>
 </body>
 </html>
