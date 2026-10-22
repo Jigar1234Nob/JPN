@@ -76,7 +76,9 @@ on public.jpn_enterprise_inquiries for all to authenticated
 using ((auth.jwt()->'app_metadata'->>'role')='admin')
 with check ((auth.jwt()->'app_metadata'->>'role')='admin');
 
-create or replace function public.jpn_admin_search_users(search_email text)
+drop function if exists public.jpn_admin_search_users(text);
+
+create function public.jpn_admin_search_users(search_email text)
 returns table(
  user_id uuid, email text, created_at timestamptz, paid boolean, expires_at timestamptz,
  plan text, disabled boolean, plan_request text, plan_request_status text, plan_requested_at text
