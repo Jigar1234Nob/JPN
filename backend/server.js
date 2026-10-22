@@ -339,6 +339,38 @@ app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) 
   }
 });
 
+app.get("/api/admin/plan-requests", requireUser, requireAdmin, async (_req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Plan requests are temporarily unavailable because administrator account access is not configured." });
+  try {
+    const requests = [];
+    for (let page = 1; page <= 20; page++) {
+      const { data, error } = await adminAuthClient.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) throw error;
+      const users = data?.users || [];
+      for (const user of users) {
+        const metadata = user.user_metadata || {};
+        const plan = String(metadata.jpn_plan_request || "").toLowerCase();
+        const status = String(metadata.jpn_plan_request_status || "pending").toLowerCase();
+        if (["basic", "premium", "enterprise"].includes(plan)) {
+          requests.push({
+            user_id: user.id,
+            email: user.email || null,
+            plan,
+            status,
+            requested_at: metadata.jpn_plan_requested_at || user.created_at || null
+          });
+        }
+      }
+      if (users.length < 1000) break;
+    }
+    requests.sort((a, b) => new Date(b.requested_at || 0).getTime() - new Date(a.requested_at || 0).getTime());
+    res.json({ requests: requests.slice(0, 100) });
+  } catch (error) {
+    console.error("Admin plan requests read failed:", error.message);
+    res.status(500).json({ error: "Could not load the latest plan requests right now." });
+  }
+});
+
 app.get("/api/admin/users", requireUser, requireAdmin, async (req, res) => {
   const email = String(req.query.email || "").trim();
   if (email.length < 3 || email.length > 254) return res.status(400).json({ error: "Enter at least 3 characters of an email address." });
