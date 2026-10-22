@@ -362,8 +362,8 @@ app.patch("/api/admin/users/:id/entitlement", requireUser, requireAdmin, async (
     if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) return res.status(400).json({ error: "Expiry must be a future date." });
     expiresAt = expiresAt.toISOString();
   }
-  const { data, error } = await req.userSupabase.rpc("jpn_admin_set_paid", {
-    target_user_id: userId, enable_paid: req.body.paid, entitlement_expires_at: expiresAt
+  const { data, error } = await req.userSupabase.rpc("jpn_admin_set_plan", {
+    target_user_id: userId, target_plan: req.body.paid ? "basic" : "free", entitlement_expires_at: expiresAt
   });
   if (error) {
     console.error("Admin entitlement update failed:", error.message);
