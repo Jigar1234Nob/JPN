@@ -116,7 +116,7 @@ app.patch("/api/profile", requireUser, async (req, res) => {
     .select("id, display_name, created_at, updated_at").single();
   if (error) {
     console.error("Profile update failed:", error.message);
-    return res.status(500).json({ error: "Could not save profile. Confirm the profile migration and RLS policies are installed." });
+    return res.status(500).json({ error: "Could not save your profile right now." });
   }
   res.json({ profile: data });
 });
@@ -125,7 +125,7 @@ app.get("/api/entitlement", requireUser, async (req, res) => {
   try { res.json({ entitlement: await getEntitlement(req), role: req.isAdmin ? "admin" : "member" }); }
   catch (error) {
     console.error("Entitlement read failed:", error.message);
-    res.status(500).json({ error: "Could not check membership. Confirm the entitlement migration is installed." });
+    res.status(500).json({ error: "Could not verify membership right now." });
   }
 });
 
@@ -143,7 +143,7 @@ app.get("/api/downloads", requireUser, async (req, res) => {
   } catch (error) {
     if (res.headersSent) return;
     console.error("Download list failed:", error.message);
-    res.status(500).json({ error: "Could not load downloads. Confirm backend/sql/002_entitlements_and_downloads.sql has been run." });
+    res.status(500).json({ error: "Could not load downloads right now." });
   }
 });
 
@@ -233,7 +233,7 @@ app.patch("/api/admin/users/:id/disabled", requireUser, requireAdmin, async (req
 
 app.get("/api/admin/download-groups", requireUser, requireAdmin, async (req, res) => {
   const { data, error } = await req.userSupabase.from("jpn_download_groups").select("id,name,description,sort_order,published").order("sort_order", { ascending: true });
-  if (error) { console.error("Admin groups read failed:", error.message); return res.status(500).json({ error: "Could not load download groups. Apply the latest JPN database migration." }); }
+  if (error) { console.error("Admin groups read failed:", error.message); return res.status(500).json({ error: "Could not load download groups right now." }); }
   res.json({ groups: data || [] });
 });
 app.post("/api/admin/download-groups", requireUser, requireAdmin, async (req, res) => {
@@ -241,7 +241,7 @@ app.post("/api/admin/download-groups", requireUser, requireAdmin, async (req, re
   const sort_order = Number.isInteger(req.body?.sort_order) ? req.body.sort_order : 0;
   if (!name || name.length > 80 || description.length > 500) return res.status(400).json({ error: "Group name is required (80 characters max); description must be 500 characters or fewer." });
   const { data, error } = await req.userSupabase.from("jpn_download_groups").insert({ name, description, sort_order, published: true }).select("id,name,description,sort_order,published").single();
-  if (error) { console.error("Admin group create failed:", error.message); return res.status(500).json({ error: "Could not create the group. Apply the latest JPN database migration." }); }
+  if (error) { console.error("Admin group create failed:", error.message); return res.status(500).json({ error: "Could not create the group right now." }); }
   res.status(201).json({ group: data });
 });
 app.patch("/api/admin/download-groups/:id", requireUser, requireAdmin, async (req, res) => {
@@ -263,7 +263,7 @@ app.delete("/api/admin/download-groups/:id", requireUser, requireAdmin, async (r
 });
 app.get("/api/admin/downloads", requireUser, requireAdmin, async (req, res) => {
   const { data, error } = await req.userSupabase.from("jpn_downloads").select("id,title,description,version,group_id,github_url,published,created_at").order("created_at", { ascending: false });
-  if (error) { console.error("Admin downloads read failed:", error.message); return res.status(500).json({ error: "Could not load release builds. Apply the latest JPN database migration." }); }
+  if (error) { console.error("Admin downloads read failed:", error.message); return res.status(500).json({ error: "Could not load release builds right now." }); }
   res.json({ downloads: data || [] });
 });
 app.post("/api/admin/downloads", requireUser, requireAdmin, async (req, res) => {
@@ -278,7 +278,7 @@ app.post("/api/admin/downloads", requireUser, requireAdmin, async (req, res) => 
   const { data: group, error: groupError } = await req.userSupabase.from("jpn_download_groups").select("id").eq("id", group_id).maybeSingle();
   if (groupError || !group) return res.status(400).json({ error: "Choose a valid download group." });
   const { data, error } = await req.userSupabase.from("jpn_downloads").insert({ id, title, description, version, group_id, github_url: parsed.toString(), object_path: null, published: true }).select("id,title,description,version,group_id,github_url,published").single();
-  if (error) { console.error("Admin build create failed:", error.message); return res.status(500).json({ error: "Could not publish this build. Check that the latest JPN database migration has been applied." }); }
+  if (error) { console.error("Admin build create failed:", error.message); return res.status(500).json({ error: "Could not publish this build right now." }); }
   res.status(201).json({ download: data });
 });
 app.patch("/api/admin/downloads/:id", requireUser, requireAdmin, async (req, res) => {
@@ -302,6 +302,13 @@ app.delete("/api/admin/downloads/:id", requireUser, requireAdmin, async (req, re
   const { error } = await req.userSupabase.from("jpn_downloads").delete().eq("id", req.params.id);
   if (error) { console.error("Admin build delete failed:", error.message); return res.status(500).json({ error: "Could not remove this build." }); }
   res.json({ success: true });
+});
+app.patch("/api/admin/enterprise-inquiries/:id", requireUser, requireAdmin, async (req, res) => {
+  const status = String(req.body?.status || "");
+  if (!["new", "contacted", "closed"].includes(status)) return res.status(400).json({ error: "Choose a valid inquiry status." });
+  const { data, error } = await req.userSupabase.from("jpn_enterprise_inquiries").update({ status }).eq("id", req.params.id).select("id,status").maybeSingle();
+  if (error || !data) { console.error("Enterprise inquiry update failed:", error?.message); return res.status(500).json({ error: "Could not update this inquiry." }); }
+  res.json({ inquiry: data });
 });
 app.get("/api/admin/enterprise-inquiries", requireUser, requireAdmin, async (req, res) => {
   const { data, error } = await req.userSupabase.from("jpn_enterprise_inquiries").select("id,name,email,organization,message,status,created_at").order("created_at", { ascending: false }).limit(100);
