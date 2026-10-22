@@ -12,7 +12,13 @@ Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level s
 - POST /api/downloads/:id/url - creates a private signed download link lasting 60 seconds
 - POST /api/admin/users/invite - admin-only account invitation by email
 - GET /api/admin/users?email=... - admin-only member search
-- PATCH /api/admin/users/:id/entitlement - admin-only grant/revoke paid access
+- PATCH /api/admin/users/:id/plan - admin-only assign Free, Basic, Premium, or Enterprise access with optional expiry
+- PATCH /api/admin/users/:id/disabled - admin-only suspend or re-enable an account
+- GET/POST/PATCH/DELETE /api/admin/download-groups - manage resource groups
+- GET/POST/PATCH/DELETE /api/admin/downloads - manage published builds and GitHub URLs
+- POST /api/inquiries/enterprise - public Enterprise inquiry submission
+- GET/PATCH /api/admin/enterprise-inquiries - review and update inquiry status
+- PATCH /api/admin/users/:id/entitlement - legacy paid-access grant/revoke endpoint
 
 All protected endpoints require Authorization: Bearer <Supabase access token>. The API validates the token with Supabase Auth. Database calls use the same user's JWT, and admin RPC functions independently verify the caller's immutable app_metadata role. The admin account-invitation endpoint additionally requires SUPABASE_SERVICE_ROLE_KEY, kept only in the backend environment and never exposed to browser code. Invitation emails redirect to `/JPN/invitation/`, where the invited person verifies the link and sets a password before entering the dashboard.
 
@@ -23,8 +29,9 @@ In Supabase Dashboard > SQL Editor, run these scripts in order:
 1. backend/sql/001_profiles.sql
 2. backend/sql/002_entitlements_and_downloads.sql
 3. backend/sql/003_plan_requests.sql
+4. backend/sql/004_tiers_resources_and_account_controls.sql
 
-The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script updates the admin search result to show pending Basic plan requests. Plan requests are stored in user-editable metadata and never grant access by themselves; paid access remains controlled by the server-side entitlement. Review migrations before applying them to an existing production database.
+The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds pending Basic request details to admin search. The fourth script adds Basic/Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply all migrations in order before using the expanded admin console.
 
 ## 2. Create your administrator account
 
@@ -61,7 +68,7 @@ For Render:
 7. After deployment, test the service's /api/health endpoint.
 8. Ensure docs/supabase-config.js exports JPN_API_BASE set to the deployed HTTPS origin, without /api at the end.
 
-The API is not live just because files are committed. A successful /api/health response and working environment variables are required.
+The API is not live just because files are committed. A successful /api/health response, working environment variables, and all database migrations are required.
 
 ## 5. Publish a private download
 
@@ -73,7 +80,7 @@ The bucket jpn-private-downloads is private. Upload the release file to it using
 
 Replace object_path with the exact path of the uploaded file. The admin policy permits this insert through a properly authenticated admin SQL/session. Do not upload private releases into the public GitHub Pages docs folder. Public assets are not gated.
 
-An active paid entitlement is required for the API to list downloads and generate signed URLs. Storage RLS also checks the entitlement. Links expire after 60 seconds; links already generated remain valid until they expire.
+An active entitlement is required for the API to list downloads and reveal build links. Private Supabase Storage links expire after 60 seconds; links already generated remain valid until they expire. GitHub-hosted release URLs are public once revealed, so use private Supabase Storage for files that must remain confidential.
 
 ## Signup terms acceptance
 
