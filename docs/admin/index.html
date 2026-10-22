@@ -53,7 +53,7 @@ const $=s=>document.querySelector(s), status=$("#status"), consoleEl=$("#console
 const apiBase=JPN_API_BASE.endsWith("/")?JPN_API_BASE.slice(0,-1):JPN_API_BASE;
 function say(text,kind="info"){status.textContent=text;status.dataset.kind=kind}
 async function api(path,options={}){
- if(!apiBase)throw new Error("The backend URL is not configured in docs/supabase-config.js.");
+ if(!apiBase)throw new Error("This service is temporarily unavailable. Please try again later.");
  const {data:{session}}=await supabase.auth.getSession();
  if(!session)throw new Error("Your session has expired. Sign in again.");
  const response=await fetch(apiBase+path,{...options,headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,...(options.headers||{})}});
