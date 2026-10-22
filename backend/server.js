@@ -166,7 +166,7 @@ app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) 
   }
   try {
     const { data, error } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: "https://jigar1234nob.github.io/JPN/dashboard/?welcome=1"
+      redirectTo: "https://jigar1234nob.github.io/JPN/invitation/"
     });
     if (error) {
       const duplicate = /already|registered|exists/i.test(error.message || "");
