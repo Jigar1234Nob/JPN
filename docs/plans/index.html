@@ -317,8 +317,8 @@
       <span class="eyebrow">Simple monthly plans</span>
       <h1>Pick your <span class="gradient">JPN plan.</span></h1>
       <p>
-        Start with web proxy access, add the upcoming JPN VPN app,
-        or get the complete package with Quick Flash.
+        Request the plan that fits your needs. JPN reviews requests manually;
+        there is no online checkout or automatic payment.
       </p>
     </section>
 
@@ -329,7 +329,7 @@
           <p class="description">Straightforward web proxy access.</p>
 
           <div class="price">$1.00 <small>/ month</small></div>
-          <div class="billing">Pre-orders: Open now<br>Full release: Monday, 26 October</div>
+          <div class="billing">Request only · manual review and payment<br>Planned release: Monday, 26 October</div>
           <hr class="rule">
 
           <ul class="features">
@@ -338,7 +338,7 @@
             <li><span class="no">—</span><span class="no">Quick Flash tool</span></li>
           </ul>
 
-          <a class="button primary" href="/JPN/#release" id="basic-preorder-button">Pre-order Basic</a>
+          <a class="button primary" href="/JPN/login/?mode=signup&amp;plan=basic" id="basic-preorder-button">Request Basic plan</a>
         </article>
 
         <article class="plan featured">
@@ -347,7 +347,7 @@
           <p class="description">Web proxy access plus the upcoming VPN app.</p>
 
           <div class="price">$3.00 <small>/ month</small></div>
-          <div class="billing">Planned monthly price</div>
+          <div class="billing">Request only · manual review and payment</div>
           <hr class="rule">
 
           <ul class="features">
@@ -356,7 +356,7 @@
             <li><span class="no">—</span><span class="no">Quick Flash tool</span></li>
           </ul>
 
-          <a class="button primary" href="/JPN/#release">Coming soon</a>
+          <a class="button primary" href="/JPN/login/?mode=signup&amp;plan=premium">Request Premium plan</a>
         </article>
 
         <article class="plan">
@@ -364,7 +364,7 @@
           <p class="description">The complete planned JPN package for teams and organizations.</p>
 
           <div class="price">Custom</div>
-          <div class="billing">Pricing discussed directly after inquiry</div>
+          <div class="billing">Manual inquiry · custom pricing and payment</div>
           <hr class="rule">
 
           <ul class="features">
@@ -382,7 +382,7 @@
           <button class="enterprise-close" type="button" id="close-enterprise" aria-label="Close Enterprise inquiry">×</button>
           <span class="eyebrow">For teams and organizations</span>
           <h2 id="enterprise-title">Inquire about Enterprise</h2>
-          <p id="enterprise-description">Tell us what your organization needs. This form sends an inquiry for review; it does not create an account or activate a plan. The JPN team aims to contact you by email within <strong>3–5 business days</strong>.</p>
+          <p id="enterprise-description">Request Enterprise access for your organization. This inquiry is reviewed manually; no online checkout or automatic activation is available. The JPN team aims to contact you by email within <strong>3–5 business days</strong>.</p>
           <form id="enterprise-form">
             <label>Name<input name="name" required maxlength="120" autocomplete="name" placeholder="Your name"></label>
             <label>Work email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@organization.com"></label>
@@ -418,8 +418,8 @@
     const preorderButton = document.getElementById("basic-preorder-button");
     function updatePreorderButton() {
       if (!preorderButton) return;
-      preorderButton.href = "/JPN/login/?mode=signup";
-      preorderButton.textContent = "Pre-order Basic";
+      preorderButton.href = "/JPN/login/?mode=signup&plan=basic";
+      preorderButton.textContent = "Request Basic plan";
     }
     updatePreorderButton();
   </script>
