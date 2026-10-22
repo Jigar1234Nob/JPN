@@ -14,7 +14,7 @@ Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level s
 - GET /api/admin/users?email=... - admin-only member search
 - PATCH /api/admin/users/:id/entitlement - admin-only grant/revoke paid access
 
-All protected endpoints require Authorization: Bearer <Supabase access token>. The API validates the token with Supabase Auth. Database calls use the same user's JWT, and admin RPC functions independently verify the caller's immutable app_metadata role. The admin account-invitation endpoint additionally requires SUPABASE_SERVICE_ROLE_KEY, kept only in the backend environment and never exposed to browser code.
+All protected endpoints require Authorization: Bearer <Supabase access token>. The API validates the token with Supabase Auth. Database calls use the same user's JWT, and admin RPC functions independently verify the caller's immutable app_metadata role. The admin account-invitation endpoint additionally requires SUPABASE_SERVICE_ROLE_KEY, kept only in the backend environment and never exposed to browser code. Invitation emails redirect to `/JPN/invitation/`, where the invited person verifies the link and sets a password before entering the dashboard.
 
 ## 1. Apply database migrations
 
@@ -57,8 +57,9 @@ For Render:
 3. Build command: npm install
 4. Start command: npm start
 5. Add SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY (server-only; never put it in docs/supabase-config.js), and FRONTEND_ORIGINS=https://jigar1234nob.github.io.
-6. After deployment, test the service's /api/health endpoint.
-7. Ensure docs/supabase-config.js exports JPN_API_BASE set to the deployed HTTPS origin, without /api at the end.
+6. In Supabase Dashboard > Authentication > URL Configuration, add `https://jigar1234nob.github.io/JPN/invitation/` to the allowed Redirect URLs so invitation links can return to the password setup page.
+7. After deployment, test the service's /api/health endpoint.
+8. Ensure docs/supabase-config.js exports JPN_API_BASE set to the deployed HTTPS origin, without /api at the end.
 
 The API is not live just because files are committed. A successful /api/health response and working environment variables are required.
 
