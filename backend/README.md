@@ -10,10 +10,11 @@ Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level s
 - GET /api/entitlement - current user's server-side paid status
 - GET /api/downloads - lists published downloads only for active paid members (admins can access)
 - POST /api/downloads/:id/url - creates a private signed download link lasting 60 seconds
+- POST /api/admin/users/invite - admin-only account invitation by email
 - GET /api/admin/users?email=... - admin-only member search
 - PATCH /api/admin/users/:id/entitlement - admin-only grant/revoke paid access
 
-All protected endpoints require Authorization: Bearer <Supabase access token>. The API validates the token with Supabase Auth. Database calls use the same user's JWT, and admin RPC functions independently verify the caller's immutable app_metadata role. No service-role key is required for this starter.
+All protected endpoints require Authorization: Bearer <Supabase access token>. The API validates the token with Supabase Auth. Database calls use the same user's JWT, and admin RPC functions independently verify the caller's immutable app_metadata role. The admin account-invitation endpoint additionally requires SUPABASE_SERVICE_ROLE_KEY, kept only in the backend environment and never exposed to browser code.
 
 ## 1. Apply database migrations
 
@@ -55,7 +56,7 @@ For Render:
 2. Set Root Directory to backend.
 3. Build command: npm install
 4. Start command: npm start
-5. Add SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, and FRONTEND_ORIGINS=https://jigar1234nob.github.io.
+5. Add SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY (server-only; never put it in docs/supabase-config.js), and FRONTEND_ORIGINS=https://jigar1234nob.github.io.
 6. After deployment, test the service's /api/health endpoint.
 7. Ensure docs/supabase-config.js exports JPN_API_BASE set to the deployed HTTPS origin, without /api at the end.
 
@@ -75,7 +76,7 @@ An active paid entitlement is required for the API to list downloads and generat
 
 ## Manual paid access, not billing
 
-There is no checkout, payment processor, or automatic billing. The admin opens /JPN/admin/, searches by email, and clicks Mark as paid or Revoke paid access. An optional expiry date can be set. This writes an entitlement in the database; the browser cannot grant itself membership.
+There is no checkout, payment processor, or automatic billing. The admin opens /JPN/admin/ to invite accounts by email, searches for existing members, and clicks Mark as paid or Revoke paid access. An optional expiry date can be set. This writes an entitlement in the database; the browser cannot grant itself membership.
 
 ## Security scope and remaining work
 
