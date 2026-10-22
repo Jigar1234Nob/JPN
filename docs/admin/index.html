@@ -17,6 +17,9 @@
 <div class="eyebrow">Administration</div><h1>Membership control</h1><p class="muted">Manually grant or revoke paid membership. No checkout or automatic billing is enabled.</p>
 <div id="status" class="notice" role="status" aria-live="polite">Verifying administrator access…</div>
 <section id="console" hidden>
+<div class="panel"><h2>Create an account</h2><p class="muted">Send a secure invitation email. The person finishes setting up their account through Supabase; no password is shown or stored in this admin page.</p>
+<form id="invite-form" class="formrow"><input id="invite-email" type="email" autocomplete="email" placeholder="new-member@example.com" aria-label="Email address for new account" required><button class="primary" id="invite-button" type="submit">Send invitation</button></form>
+<div class="foot" id="invite-status" role="status" aria-live="polite" style="margin-top:12px"></div></div>
 <div class="panel"><h2>Find a member</h2><p class="muted">Search by part of their email address. At least three characters are required.</p>
 <form id="search-form" class="formrow"><input id="email-query" type="search" autocomplete="off" placeholder="member@example.com" aria-label="Email address to search" required><button class="primary" id="search-button" type="submit">Search accounts</button></form>
 <div class="foot" style="margin-top:12px">Only authenticated users with the server-verified Supabase app_metadata role of admin can use this console.</div></div>
@@ -53,6 +56,19 @@ function renderUsers(users){
  }).join("");
  results.querySelectorAll("[data-toggle-paid]").forEach(button=>button.addEventListener("click",()=>changePaid(button)));
 }
+function inviteSay(text,kind="info"){const el=$("#invite-status");el.textContent=text;el.dataset.kind=kind}
+$("#invite-form").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const email=$("#invite-email").value.trim(),button=$("#invite-button");
+ if(!email)return;
+ button.disabled=true;button.textContent="Sending invitation…";inviteSay("Creating a secure account invitation…");
+ try{
+  const data=await api("/api/admin/users/invite",{method:"POST",body:JSON.stringify({email})});
+  inviteSay(data.message||"Invitation sent to "+email+".","success");
+  $("#invite-form").reset();
+ }catch(err){inviteSay(err.message||"Could not send invitation.","error")}
+ finally{button.disabled=false;button.textContent="Send invitation"}
+});
 async function searchUsers(email){
  $("#search-button").disabled=true;results.innerHTML='<div class="empty">Searching securely…</div>';
  try{const data=await api("/api/admin/users?email="+encodeURIComponent(email));renderUsers(data.users||[]);say("Search complete. Changes apply to server-side entitlements.","success")}
