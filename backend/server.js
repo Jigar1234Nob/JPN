@@ -74,7 +74,7 @@ async function getEntitlement(req) {
     .select("paid,plan,expires_at,updated_at").eq("user_id", req.user.id).maybeSingle();
   if (error) throw error;
   const active = !!data?.paid && (!data.expires_at || new Date(data.expires_at).getTime() > Date.now());
-  return { paid: active, plan: active ? (data?.plan || "basic") : "free", expires_at: data?.expires_at || null, updated_at: data?.updated_at || null, admin_override: false };
+  return { paid: active, plan: data?.plan || (data?.paid ? "basic" : "free"), expires_at: data?.expires_at || null, updated_at: data?.updated_at || null, admin_override: false };
 }
 
 function requireAdmin(req, res, next) {
@@ -139,7 +139,9 @@ app.get("/api/downloads", requireUser, async (req, res) => {
     const { data: groups, error: groupError } = await req.userSupabase.from("jpn_download_groups")
       .select("id,name,description,sort_order").eq("published", true).order("sort_order", { ascending: true });
     if (groupError) throw groupError;
-    res.json({ downloads: data || [], groups: groups || [], entitlement });
+    const visibleGroupIds = new Set((groups || []).map(group => group.id));
+    const visibleDownloads = (data || []).filter(item => !item.group_id || visibleGroupIds.has(item.group_id));
+    res.json({ downloads: visibleDownloads, groups: groups || [], entitlement });
   } catch (error) {
     if (res.headersSent) return;
     console.error("Download list failed:", error.message);
@@ -170,7 +172,7 @@ app.post("/api/downloads/:id/url", requireUser, async (req, res) => {
   }
 });
 
-app.post("/api/inquiries/enterprise", async (req, res) => {
+app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false }), async (req, res) => {
   const name = String(req.body?.name || "").trim();
   const email = String(req.body?.email || "").trim().toLowerCase();
   const organization = String(req.body?.organization || "").trim();
