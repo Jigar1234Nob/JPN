@@ -96,6 +96,20 @@ async function changeDisabled(button){
  catch(err){say(err.message||"Could not update account status.","error");button.disabled=false;button.textContent=currentlyDisabled?"Enable account":"Disable account"}
 }
 $("#search-form").addEventListener("submit",e=>{e.preventDefault();const email=$("#email-query").value.trim();if(email.length<3){say("Enter at least three characters.","error");return}searchUsers(email)});
+$("#invite-form").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const form=e.currentTarget,email=$("#invite-email").value.trim().toLowerCase(),button=$("#invite-button"),inviteStatus=$("#invite-status");
+ if(!email){inviteStatus.textContent="Enter an email address.";inviteStatus.dataset.kind="error";return}
+ button.disabled=true;button.textContent="Sending…";inviteStatus.textContent="Sending invitation securely…";inviteStatus.dataset.kind="info";
+ try{
+  const data=await api("/api/admin/users/invite",{method:"POST",body:JSON.stringify({email})});
+  inviteStatus.textContent=data.message||"Invitation sent. Ask the recipient to check their inbox and spam folder.";
+  inviteStatus.dataset.kind="success";form.reset();
+ }catch(err){
+  inviteStatus.textContent=err.message||"Could not send the invitation. Please try again.";
+  inviteStatus.dataset.kind="error";
+ }finally{button.disabled=false;button.textContent="Send invitation"}
+});
 const {data:{session},error}=await supabase.auth.getSession();
 if(error||!session){location.replace("/JPN/login/")}
 else{
