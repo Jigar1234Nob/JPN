@@ -101,7 +101,7 @@ app.get("/api/profile", requireUser, async (req, res) => {
     .select("id, display_name, created_at, updated_at").eq("id", req.user.id).maybeSingle();
   if (error) {
     console.error("Profile read failed:", error.message);
-    return res.status(500).json({ error: "Could not load profile. Confirm the profile migration is installed." });
+    return res.status(500).json({ error: "Could not load your profile right now." });
   }
   res.json({ profile: data });
 });
@@ -345,7 +345,7 @@ app.get("/api/admin/users", requireUser, requireAdmin, async (req, res) => {
   const { data, error } = await req.userSupabase.rpc("jpn_admin_search_users", { search_email: email });
   if (error) {
     console.error("Admin user search failed:", error.message);
-    return res.status(500).json({ error: error.message.includes("Admin access required") ? "Admin role is not configured correctly." : "Could not search accounts. Run the entitlements migration." });
+    return res.status(500).json({ error: error.message.includes("Admin access required") ? "Administrator access could not be verified." : "Could not search accounts right now." });
   }
   res.json({ users: data || [] });
 });
@@ -367,7 +367,7 @@ app.patch("/api/admin/users/:id/entitlement", requireUser, requireAdmin, async (
   });
   if (error) {
     console.error("Admin entitlement update failed:", error.message);
-    return res.status(500).json({ error: error.message.includes("Admin access required") ? "Admin role is not configured correctly." : "Could not update membership. Run the entitlements migration." });
+    return res.status(500).json({ error: error.message.includes("Admin access required") ? "Admin role is not configured correctly." : "Could not update membership right now." });
   }
   res.json({ entitlement: data?.[0] || null });
 });
