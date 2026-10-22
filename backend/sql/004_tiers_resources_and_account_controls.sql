@@ -180,7 +180,8 @@ $$;
 create or replace function public.jpn_admin_set_plan(target_user_id uuid, target_plan text, entitlement_expires_at timestamptz default null)
 returns table(user_id uuid, paid boolean, plan text, expires_at timestamptz, updated_at timestamptz)
 language plpgsql security definer set search_path = ''
-as $$
+as $
+#variable_conflict use_column
 begin
  if (auth.jwt()->'app_metadata'->>'role') is distinct from 'admin' or not public.jpn_current_account_enabled() then
    raise exception 'Admin access required' using errcode='42501';
