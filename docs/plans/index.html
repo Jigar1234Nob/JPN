@@ -307,7 +307,7 @@
       <div class="nav-links">
         <a href="/JPN/">Home</a>
         <a class="active" href="/JPN/plans/" aria-current="page">Plans</a>
-        <a class="button primary" href="/JPN/#release">Launch timer</a>
+        <a class="button primary" href="/JPN/login/?mode=signup">Create account</a>
       </div>
     </nav>
   </header>
@@ -329,7 +329,7 @@
           <p class="description">Straightforward web proxy access.</p>
 
           <div class="price">$1.00 <small>/ month</small></div>
-          <div class="billing">Pre-orders: Friday, 23 October<br>Full release: Monday, 26 October</div>
+          <div class="billing">Pre-orders: Open now<br>Full release: Monday, 26 October</div>
           <hr class="rule">
 
           <ul class="features">
@@ -418,15 +418,10 @@
     const preorderButton = document.getElementById("basic-preorder-button");
     function updatePreorderButton() {
       if (!preorderButton) return;
-      const dateParts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit"
-      }).formatToParts(new Date());
-      const today = dateParts.filter(part => part.type !== "literal").map(part => part.value).join("-");
-      preorderButton.href = "/JPN/login/?welcome=1";
-      preorderButton.textContent = today >= "2026-10-26" ? "Open JPN account" : "Pre-order Basic";
+      preorderButton.href = "/JPN/login/?mode=signup";
+      preorderButton.textContent = "Pre-order Basic";
     }
     updatePreorderButton();
-    setInterval(updatePreorderButton, 60000);
   </script>
   <script type="module">
     import { JPN_API_BASE } from "../supabase-config.js";
