@@ -475,8 +475,17 @@
         ["days", "hours", "minutes", "seconds"].forEach(id => {
           document.getElementById(id).textContent = "00";
         });
-        message.textContent = "Basic pre-orders are open. Full release is scheduled for Monday, 26 October 2026.";
-        if (launchAction) { launchAction.href = "/JPN/login/?welcome=1"; launchAction.textContent = "Pre-order Basic"; }
+        const dateParts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit"
+        }).formatToParts(new Date());
+        const today = dateParts.filter(part => part.type !== "literal").map(part => part.value).join("-");
+        if (today >= "2026-10-26") {
+          message.textContent = "Full release day has arrived. Sign in to check which JPN services are available.";
+          if (launchAction) { launchAction.href = "/JPN/login/?welcome=1"; launchAction.textContent = "Open JPN account"; }
+        } else {
+          message.textContent = "Basic pre-orders are open. Full release is scheduled for Monday, 26 October 2026.";
+          if (launchAction) { launchAction.href = "/JPN/login/?welcome=1"; launchAction.textContent = "Pre-order Basic"; }
+        }
         return;
       }
 
