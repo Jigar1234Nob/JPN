@@ -97,13 +97,13 @@ using (published and public.jpn_current_account_enabled() and exists (
 drop policy if exists "Admins can manage JPN download groups" on public.jpn_download_groups;
 create policy "Admins can manage JPN download groups"
 on public.jpn_download_groups for all to authenticated
-using ((auth.jwt()->'app_metadata'->>'role')='admin')
-with check ((auth.jwt()->'app_metadata'->>'role')='admin');
+using ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled())
+with check ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled());
 
 drop policy if exists "Admins can manage JPN downloads" on public.jpn_downloads;
 create policy "Admins can manage JPN downloads" on public.jpn_downloads for all to authenticated
-using ((auth.jwt()->'app_metadata'->>'role')='admin')
-with check ((auth.jwt()->'app_metadata'->>'role')='admin');
+using ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled())
+with check ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled());
 
 create table if not exists public.jpn_enterprise_inquiries (
   id uuid primary key default gen_random_uuid(),
@@ -128,8 +128,8 @@ with check (
 drop policy if exists "Admins can manage Enterprise inquiries" on public.jpn_enterprise_inquiries;
 create policy "Admins can manage Enterprise inquiries"
 on public.jpn_enterprise_inquiries for all to authenticated
-using ((auth.jwt()->'app_metadata'->>'role')='admin')
-with check ((auth.jwt()->'app_metadata'->>'role')='admin');
+using ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled())
+with check ((auth.jwt()->'app_metadata'->>'role')='admin' and public.jpn_current_account_enabled());
 
 drop function if exists public.jpn_admin_search_users(text);
 
@@ -141,7 +141,7 @@ returns table(
 language plpgsql security definer set search_path = ''
 as $$
 begin
- if (auth.jwt()->'app_metadata'->>'role') is distinct from 'admin' then
+ if (auth.jwt()->'app_metadata'->>'role') is distinct from 'admin' or not public.jpn_current_account_enabled() then
    raise exception 'Admin access required' using errcode='42501';
  end if;
  if length(trim(coalesce(search_email,'')))<3 then
