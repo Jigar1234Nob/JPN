@@ -353,7 +353,7 @@
       <div class="nav-links">
         <a class="active" href="/JPN/" aria-current="page">Home</a>
         <a href="/JPN/plans/">Plans</a>
-        <span id="member-nav" hidden style="display:contents"><a href="/JPN/dashboard/">My Account</a><a href="/JPN/downloads/">Downloads</a></span>
+        <span id="member-nav" hidden style="display:contents"><a href="/JPN/dashboard/">My Account</a><a href="/JPN/dashboard/#downloads">Downloads</a></span>
         <a class="button primary" href="/JPN/#release">Launch timer</a>
       </div>
     </nav>
@@ -436,7 +436,7 @@
         </div>
 
         <p id="timer-message" aria-live="polite">Preparing for launch…</p>
-        <a class="button primary" href="/JPN/plans/">View plans</a>
+        <a class="button primary" id="launch-action" href="/JPN/plans/">View plans</a>
       </div>
     </section>
   </main>
@@ -469,12 +469,14 @@
     function updateCountdown() {
       const remaining = releaseTime - Date.now();
       const message = document.getElementById("timer-message");
+      const launchAction = document.getElementById("launch-action");
 
       if (remaining <= 0) {
         ["days", "hours", "minutes", "seconds"].forEach(id => {
           document.getElementById(id).textContent = "00";
         });
-        message.textContent = "Basic pre-orders are open. Full release: Monday, 26 October 2026.";
+        message.textContent = "Basic pre-orders are open. Full release is scheduled for Monday, 26 October 2026.";
+        if (launchAction) { launchAction.href = "/JPN/login/?welcome=1"; launchAction.textContent = "Pre-order Basic"; }
         return;
       }
 
@@ -488,7 +490,8 @@
       document.getElementById("minutes").textContent = String(minutes).padStart(2, "0");
       document.getElementById("seconds").textContent = String(seconds).padStart(2, "0");
 
-      message.textContent = "Time left until launch";
+      message.textContent = "Time left until Basic pre-orders open";
+      if (launchAction) { launchAction.href = "/JPN/plans/"; launchAction.textContent = "View plans"; }
     }
 
     updateCountdown();
