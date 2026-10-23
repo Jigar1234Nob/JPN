@@ -307,8 +307,9 @@
       <div class="nav-links">
         <a href="/JPN/">Home</a>
         <a class="active" href="/JPN/plans/" aria-current="page">Plans</a>
-        <a class="button" href="/JPN/login/">Log in</a>
-        <a class="button primary" href="/JPN/login/?mode=signup">Create account</a>
+        <a class="button" id="nav-login" href="/JPN/login/">Log in</a>
+        <a class="button primary" id="nav-signup" href="/JPN/login/?mode=signup">Create account</a>
+        <a class="button primary" id="nav-dashboard" href="/JPN/dashboard/" hidden>Dashboard</a>
       </div>
     </nav>
   </header>
@@ -423,7 +424,21 @@
     updatePreorderButton();
   </script>
   <script type="module">
-    import { JPN_API_BASE } from "../supabase-config.js";
+    import { JPN_API_BASE, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "../supabase-config.js";
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const loginButton = document.getElementById("nav-login");
+    const signupButton = document.getElementById("nav-signup");
+    const dashboardButton = document.getElementById("nav-dashboard");
+    const syncAuthNav = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      loginButton.hidden = !!session;
+      signupButton.hidden = !!session;
+      dashboardButton.hidden = !session;
+    };
+    await syncAuthNav();
+    supabase.auth.onAuthStateChange(() => { syncAuthNav(); });
+
     const form = document.getElementById("enterprise-form");
     const modal = document.getElementById("enterprise-modal");
     const feedback = document.getElementById("feedback-modal");
