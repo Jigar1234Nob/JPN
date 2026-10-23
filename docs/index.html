@@ -364,8 +364,9 @@
         <a class="active" href="/JPN/" aria-current="page">Home</a>
         <a href="/JPN/plans/">Plans</a>
         <span id="member-nav" hidden style="display:contents"><a href="/JPN/dashboard/">My Account</a><a href="/JPN/dashboard/#downloads">Downloads</a></span>
-        <a class="button" href="/JPN/login/">Log in</a>
-        <a class="button primary" href="/JPN/login/?mode=signup">Create account</a>
+        <a class="button" id="nav-login" href="/JPN/login/">Log in</a>
+        <a class="button primary" id="nav-signup" href="/JPN/login/?mode=signup">Create account</a>
+        <a class="button primary" id="nav-dashboard" href="/JPN/dashboard/" hidden>Dashboard</a>
       </div>
     </nav>
   </header>
@@ -459,10 +460,16 @@
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js";
     const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     const memberNav = document.getElementById("member-nav");
+    const loginButton = document.getElementById("nav-login");
+    const signupButton = document.getElementById("nav-signup");
+    const dashboardButton = document.getElementById("nav-dashboard");
     const syncMemberNav = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       memberNav.hidden = !session;
       memberNav.style.display = session ? "contents" : "none";
+      loginButton.hidden = !!session;
+      signupButton.hidden = !!session;
+      dashboardButton.hidden = !session;
     };
     await syncMemberNav();
     supabase.auth.onAuthStateChange(() => { syncMemberNav(); });
