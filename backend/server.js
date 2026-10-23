@@ -25,6 +25,31 @@ const allowedOrigins = (process.env.FRONTEND_ORIGINS ||
   "https://jigar1234nob.github.io,http://localhost:5500,http://127.0.0.1:5500")
   .split(",").map(value => value.trim()).filter(Boolean);
 
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
+const JPN_NOTIFICATION_EMAIL = process.env.JPN_NOTIFICATION_EMAIL;
+
+async function sendResendEmail({ to, subject, text }) {
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    console.warn("Resend email skipped: configure RESEND_API_KEY and RESEND_FROM_EMAIL.");
+    return { sent: false, reason: "not_configured" };
+  }
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ from: RESEND_FROM_EMAIL, to: [to], subject, text })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("Resend email failed:", response.status, result.message || result.name || "Unknown provider error");
+    return { sent: false, reason: "provider_error" };
+  }
+  return { sent: true, id: result.id || null };
+}
+
 app.disable("x-powered-by");
 // Render terminates HTTPS in front of this service and forwards client IPs.
 // Trust one proxy hop so express-rate-limit can identify clients correctly.
@@ -184,6 +209,42 @@ app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limi
   try {
     const { error } = await authClient.from("jpn_enterprise_inquiries").insert({ name, email, organization, message });
     if (error) throw error;
+
+    // Persist the inquiry first. Email delivery is best-effort so a temporary
+    // Resend outage never loses a customer's submitted request.
+    if (RESEND_API_KEY && RESEND_FROM_EMAIL && JPN_NOTIFICATION_EMAIL) {
+      const adminText = [
+        "A new JPN Enterprise inquiry was submitted.",
+        "",
+        `Name: ${name}`,
+        `Email: ${email}`,
+        `Organization: ${organization || "Not provided"}`,
+        "",
+        "Message:",
+        message
+      ].join("\\n");
+      await sendResendEmail({
+        to: JPN_NOTIFICATION_EMAIL,
+        subject: "New JPN Enterprise inquiry",
+        text: adminText
+      });
+      await sendResendEmail({
+        to: email,
+        subject: "We received your JPN Enterprise inquiry",
+        text: [
+          `Hi ${name},`,
+          "",
+          "Thanks for contacting JPN about Enterprise. We have received your inquiry for manual review.",
+          "The JPN team aims to contact you by email within 3–5 business days.",
+          "",
+          "This is an inquiry only. It does not activate a membership or trigger a payment.",
+          "",
+          "JPN · J-Private-Networking Group"
+        ].join("\\n")
+      });
+    } else {
+      console.warn("Enterprise inquiry saved, but Resend email notifications are not configured.");
+    }
     return res.status(201).json({ message: "Your Enterprise inquiry has been received. The JPN team can review it and contact you." });
   } catch (error) {
     console.error("Enterprise inquiry submission failed:", error.message);
