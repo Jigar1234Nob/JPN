@@ -63,6 +63,23 @@ async function sendGmailEmail({ to, subject, text }) {
 }
 
 
+app.disable("x-powered-by");
+// Render terminates HTTPS in front of this service and forwards client IPs.
+// Trust one proxy hop so express-rate-limit can identify clients correctly.
+app.set("trust proxy", 1);
+app.use(helmet());
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Origin is not allowed by CORS."));
+  },
+  methods: ["GET", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Authorization", "Content-Type"],
+  maxAge: 600
+}));
+app.use(express.json({ limit: "20kb" }));
+app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false }));
+
 const authEmailLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
 const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
 
@@ -170,23 +187,6 @@ app.post("/api/auth/password-reset", authEmailLimiter, async (req, res) => {
     return res.status(500).json({ error: "Could not request a password reset right now." });
   }
 });
-
-app.disable("x-powered-by");
-// Render terminates HTTPS in front of this service and forwards client IPs.
-// Trust one proxy hop so express-rate-limit can identify clients correctly.
-app.set("trust proxy", 1);
-app.use(helmet());
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error("Origin is not allowed by CORS."));
-  },
-  methods: ["GET", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Authorization", "Content-Type"],
-  maxAge: 600
-}));
-app.use(express.json({ limit: "20kb" }));
-app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false }));
 
 app.get("/api/health", (_req, res) => res.json({
   ok: true, service: "jpn-api", version: "1.3.0", features: ["admin-invitations", "tier-management", "account-suspension", "resource-groups", "enterprise-inquiries"], timestamp: new Date().toISOString()
