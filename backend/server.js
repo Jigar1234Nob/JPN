@@ -62,6 +62,115 @@ async function sendGmailEmail({ to, subject, text }) {
   }
 }
 
+
+const authEmailLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
+const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
+
+function requireGmailEmail(res) {
+  if (!gmailTransport || !GMAIL_SMTP_USER) {
+    res.status(503).json({ error: "JPN email delivery is not configured yet. Configure the Gmail SMTP variables in Render." });
+    return false;
+  }
+  return true;
+}
+
+app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Account creation is temporarily unavailable." });
+  if (!requireGmailEmail(res)) return;
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+  const terms = req.body?.terms;
+  if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
+  if (password.length < 8 || password.length > 128) return res.status(400).json({ error: "Use a password between 8 and 128 characters." });
+  if (!terms || terms.accepted !== true) return res.status(400).json({ error: "You must accept the Terms of Service before creating an account." });
+
+  try {
+    const { data, error } = await adminAuthClient.auth.admin.generateLink({
+      type: "signup",
+      email,
+      password,
+      options: {
+        redirectTo: "https://jigar1234nob.github.io/JPN/dashboard/?welcome=1",
+        data: {
+          jpn_terms_accepted_at: String(terms.acceptedAt || new Date().toISOString()),
+          jpn_terms_version: "2026-10-22",
+          jpn_terms_ip_vpn_acknowledged: true
+        }
+      }
+    });
+    if (error || !data?.properties?.action_link) {
+      const duplicate = /already|registered|exists/i.test(error?.message || "");
+      return res.status(duplicate ? 409 : 400).json({
+        error: duplicate ? "An account may already exist for that email address. Try signing in or resetting your password." : "Could not create the account. Check the details and try again."
+      });
+    }
+
+    const sent = await sendGmailEmail({
+      to: email,
+      subject: "Confirm your JPN email address",
+      text: [
+        "Welcome to JPN.",
+        "",
+        "Confirm your email address by opening this link:",
+        data.properties.action_link,
+        "",
+        "If you did not request a JPN account, you can ignore this email."
+      ].join("\n")
+    });
+    if (!sent.sent) {
+      if (data.user?.id) {
+        const { error: cleanupError } = await adminAuthClient.auth.admin.deleteUser(data.user.id);
+        if (cleanupError) console.error("Could not clean up an unconfirmed account after email failure:", cleanupError.message);
+      }
+      return res.status(503).json({ error: "JPN created no active account because the confirmation email could not be sent. Check the Render email settings and try again." });
+    }
+    return res.status(201).json({ message: "Account created. Check your inbox and spam folder for the JPN confirmation email." });
+  } catch (error) {
+    console.error("JPN signup failed:", error.message);
+    return res.status(500).json({ error: "Could not create your account right now." });
+  }
+});
+
+app.post("/api/auth/password-reset", authEmailLimiter, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Password recovery is temporarily unavailable." });
+  if (!requireGmailEmail(res)) return;
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
+
+  try {
+    const { data, error } = await adminAuthClient.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: "https://jigar1234nob.github.io/JPN/login/" }
+    });
+    // Use a generic response for unknown accounts to avoid exposing which addresses are registered.
+    if (error || !data?.properties?.action_link) {
+      if (error && !/not found|no user|user not found/i.test(error.message || "")) {
+        console.error("Password reset link generation failed:", error.message);
+      }
+      return res.json({ message: "If an account exists for that address, a password reset email will be sent." });
+    }
+
+    const sent = await sendGmailEmail({
+      to: email,
+      subject: "Reset your JPN password",
+      text: [
+        "A password reset was requested for your JPN account.",
+        "",
+        "Use this link to choose a new password:",
+        data.properties.action_link,
+        "",
+        "If you did not request this, you can ignore this email."
+      ].join("\n")
+    });
+    if (!sent.sent) return res.status(503).json({ error: "The password reset email could not be sent. Check JPN's Render email settings and try again." });
+    return res.json({ message: "If an account exists for that address, a password reset email will be sent." });
+  } catch (error) {
+    console.error("JPN password reset failed:", error.message);
+    return res.status(500).json({ error: "Could not request a password reset right now." });
+  }
+});
+
 app.disable("x-powered-by");
 // Render terminates HTTPS in front of this service and forwards client IPs.
 // Trust one proxy hop so express-rate-limit can identify clients correctly.
@@ -393,19 +502,39 @@ app.get("/api/admin/enterprise-inquiries", requireUser, requireAdmin, async (req
 
 app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) => {
   if (!adminAuthClient) return res.status(503).json({ error: "Account invitations are temporarily unavailable. Please try again later." });
+  if (!requireGmailEmail(res)) return;
   const email = String(req.body?.email || "").trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-    return res.status(400).json({ error: "Enter a valid email address." });
-  }
+  if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
   try {
-    const { data, error } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: "https://jigar1234nob.github.io/JPN/invitation/"
+    const { data, error } = await adminAuthClient.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: { redirectTo: "https://jigar1234nob.github.io/JPN/invitation/" }
     });
-    if (error) {
-      const duplicate = /already|registered|exists/i.test(error.message || "");
-      return res.status(duplicate ? 409 : 400).json({ error: duplicate ? "An account already exists for that email address." : "Could not send the account invitation. Check Supabase Auth email settings." });
+    if (error || !data?.properties?.action_link) {
+      const duplicate = /already|registered|exists/i.test(error?.message || "");
+      return res.status(duplicate ? 409 : 400).json({ error: duplicate ? "An account already exists for that email address." : "Could not create the invitation. Check the email address and try again." });
     }
-    return res.status(201).json({ user: { id: data.user?.id || null, email: data.user?.email || email }, message: "Invitation sent. The user must follow the email link to finish setting up their account." });
+    const sent = await sendGmailEmail({
+      to: email,
+      subject: "You're invited to JPN",
+      text: [
+        "You have been invited to create your JPN account.",
+        "",
+        "Open this link to accept the invitation and set your password:",
+        data.properties.action_link,
+        "",
+        "If you were not expecting this invitation, you can ignore this email."
+      ].join("\\n")
+    });
+    if (!sent.sent) {
+      if (data.user?.id) {
+        const { error: cleanupError } = await adminAuthClient.auth.admin.deleteUser(data.user.id);
+        if (cleanupError) console.error("Could not clean up an invited account after email failure:", cleanupError.message);
+      }
+      return res.status(503).json({ error: "The invitation email could not be sent. Check Render's Gmail SMTP settings and try again." });
+    }
+    return res.status(201).json({ user: { id: data.user?.id || null, email: data.user?.email || email }, message: "Invitation sent through JPN email delivery." });
   } catch (error) {
     console.error("Admin invitation failed:", error.message);
     return res.status(500).json({ error: "Could not create the account invitation." });
