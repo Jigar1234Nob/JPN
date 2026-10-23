@@ -222,7 +222,7 @@ app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limi
         "",
         "Message:",
         message
-      ].join("\\n");
+      ].join("\n");
       await sendResendEmail({
         to: JPN_NOTIFICATION_EMAIL,
         subject: "New JPN Enterprise inquiry",
@@ -240,7 +240,7 @@ app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limi
           "This is an inquiry only. It does not activate a membership or trigger a payment.",
           "",
           "JPN · J-Private-Networking Group"
-        ].join("\\n")
+        ].join("\n")
       });
     } else {
       console.warn("Enterprise inquiry saved, but Resend email notifications are not configured.");
