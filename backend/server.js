@@ -25,36 +25,41 @@ const allowedOrigins = (process.env.FRONTEND_ORIGINS ||
   "https://jigar1234nob.github.io,http://localhost:5500,http://127.0.0.1:5500")
   .split(",").map(value => value.trim()).filter(Boolean);
 
-const SMTP2GO_API_KEY = process.env.SMTP2GO_API_KEY;
-const SMTP2GO_FROM_EMAIL = process.env.SMTP2GO_FROM_EMAIL;
+const GMAIL_SMTP_USER = process.env.GMAIL_SMTP_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 const JPN_NOTIFICATION_EMAIL = process.env.JPN_NOTIFICATION_EMAIL;
+const nodemailer = require("nodemailer");
 
-async function sendSmtp2goEmail({ to, subject, text }) {
-  if (!SMTP2GO_API_KEY || !SMTP2GO_FROM_EMAIL) {
-    console.warn("SMTP2GO email skipped: configure SMTP2GO_API_KEY and SMTP2GO_FROM_EMAIL.");
+const gmailTransport = GMAIL_SMTP_USER && GMAIL_APP_PASSWORD
+  ? nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      auth: {
+        user: GMAIL_SMTP_USER,
+        pass: GMAIL_APP_PASSWORD.replace(/\\s+/g, "")
+      }
+    })
+  : null;
+
+async function sendGmailEmail({ to, subject, text }) {
+  if (!gmailTransport || !GMAIL_SMTP_USER) {
+    console.warn("Gmail email skipped: configure GMAIL_SMTP_USER and GMAIL_APP_PASSWORD.");
     return { sent: false, reason: "not_configured" };
   }
-  const response = await fetch("https://api.smtp2go.com/v3/email/send", {
-    method: "POST",
-    headers: {
-      "X-Smtp2go-Api-Key": SMTP2GO_API_KEY,
-      "Content-Type": "application/json",
-      "accept": "application/json"
-    },
-    body: JSON.stringify({
-      sender: SMTP2GO_FROM_EMAIL,
-      to: [to],
+  try {
+    const result = await gmailTransport.sendMail({
+      from: { name: "JPN", address: GMAIL_SMTP_USER },
+      to,
       subject,
-      text_body: text,
-      fastaccept: true
-    })
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || Number(result.data?.failed || 0) > 0 || Number(result.data?.succeeded || 0) < 1) {
-    console.error("SMTP2GO email failed:", response.status, result.data?.error || result.data?.failures?.[0]?.reason || result.error || "Unknown provider error");
+      text
+    });
+    return { sent: true, id: result.messageId || null };
+  } catch (error) {
+    console.error("Gmail SMTP email failed:", error.message);
     return { sent: false, reason: "provider_error" };
   }
-  return { sent: true, id: result.data?.email_id || result.request_id || null };
 }
 
 app.disable("x-powered-by");
@@ -218,8 +223,8 @@ app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limi
     if (error) throw error;
 
     // Persist the inquiry first. Email delivery is best-effort so a temporary
-    // SMTP2GO outage never loses a customer's submitted request.
-    if (SMTP2GO_API_KEY && SMTP2GO_FROM_EMAIL && JPN_NOTIFICATION_EMAIL) {
+    // Gmail SMTP outage never loses a customer's submitted request.
+    if (GMAIL_SMTP_USER && GMAIL_APP_PASSWORD && JPN_NOTIFICATION_EMAIL) {
       const adminText = [
         "A new JPN Enterprise inquiry was submitted.",
         "",
@@ -230,12 +235,12 @@ app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limi
         "Message:",
         message
       ].join("\n");
-      await sendSmtp2goEmail({
+      await sendGmailEmail({
         to: JPN_NOTIFICATION_EMAIL,
         subject: "New JPN Enterprise inquiry",
         text: adminText
       });
-      await sendSmtp2goEmail({
+      await sendGmailEmail({
         to: email,
         subject: "We received your JPN Enterprise inquiry",
         text: [
@@ -250,7 +255,7 @@ app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limi
         ].join("\n")
       });
     } else {
-      console.warn("Enterprise inquiry saved, but SMTP2GO email notifications are not configured.");
+      console.warn("Enterprise inquiry saved, but Gmail SMTP email notifications are not configured.");
     }
     return res.status(201).json({ message: "Your Enterprise inquiry has been received. The JPN team can review it and contact you." });
   } catch (error) {
