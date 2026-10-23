@@ -500,6 +500,71 @@ app.get("/api/admin/enterprise-inquiries", requireUser, requireAdmin, async (req
   res.json({ inquiries: data || [] });
 });
 
+app.post("/api/auth/change-email", requireUser, authEmailLimiter, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Email changes are temporarily unavailable." });
+  if (!requireGmailEmail(res)) return;
+  const currentEmail = String(req.user.email || "").trim().toLowerCase();
+  const newEmail = String(req.body?.email || "").trim().toLowerCase();
+  if (!currentEmail || !validEmail(newEmail)) return res.status(400).json({ error: "Enter a valid new email address." });
+  if (currentEmail === newEmail) return res.status(400).json({ error: "That is already your account email address." });
+
+  try {
+    const [currentResult, newResult] = await Promise.all([
+      adminAuthClient.auth.admin.generateLink({
+        type: "email_change_current",
+        email: currentEmail,
+        newEmail,
+        options: { redirectTo: "https://jigar1234nob.github.io/JPN/dashboard/" }
+      }),
+      adminAuthClient.auth.admin.generateLink({
+        type: "email_change_new",
+        email: currentEmail,
+        newEmail,
+        options: { redirectTo: "https://jigar1234nob.github.io/JPN/dashboard/" }
+      })
+    ]);
+    if (currentResult.error || newResult.error ||
+        !currentResult.data?.properties?.action_link || !newResult.data?.properties?.action_link) {
+      console.error("Email change link generation failed:", currentResult.error?.message || newResult.error?.message || "Missing action link");
+      return res.status(400).json({ error: "Could not start the email change. Check that secure email change is enabled in Supabase Auth settings." });
+    }
+
+    const [currentSent, newSent] = await Promise.all([
+      sendGmailEmail({
+        to: currentEmail,
+        subject: "Confirm your JPN email change",
+        text: [
+          "A request was made to change your JPN account email to " + newEmail + ".",
+          "",
+          "Confirm that you requested this change:",
+          currentResult.data.properties.action_link,
+          "",
+          "If you did not request this, ignore this email and do not confirm the change."
+        ].join("\n")
+      }),
+      sendGmailEmail({
+        to: newEmail,
+        subject: "Confirm your new JPN email for JPN",
+        text: [
+          "A request was made to use this address for a JPN account.",
+          "",
+          "Confirm the new email address:",
+          newResult.data.properties.action_link,
+          "",
+          "If you did not request this, ignore this email."
+        ].join("\n")
+      })
+    ]);
+    if (!currentSent.sent || !newSent.sent) {
+      return res.status(503).json({ error: "One or both confirmation emails could not be sent. Check Render's Gmail SMTP settings before requesting the change again." });
+    }
+    return res.json({ message: "Confirmation links were sent to your current and new email addresses. Confirm both to finish the change." });
+  } catch (error) {
+    console.error("JPN email change failed:", error.message);
+    return res.status(500).json({ error: "Could not request an email change right now." });
+  }
+});
+
 app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) => {
   if (!adminAuthClient) return res.status(503).json({ error: "Account invitations are temporarily unavailable. Please try again later." });
   if (!requireGmailEmail(res)) return;
@@ -522,10 +587,10 @@ app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) 
         "You have been invited to create your JPN account.",
         "",
         "Open this link to accept the invitation and set your password:",
-        data.properties.action_link,
+        "https://jigar1234nob.github.io/JPN/invitation/?token_hash=" + encodeURIComponent(data.properties.hashed_token) + "&type=invite",
         "",
         "If you were not expecting this invitation, you can ignore this email."
-      ].join("\\n")
+      ].join("\n")
     });
     if (!sent.sent) {
       if (data.user?.id) {
