@@ -38,7 +38,7 @@ const gmailTransport = GMAIL_SMTP_USER && GMAIL_APP_PASSWORD
       requireTLS: true,
       auth: {
         user: GMAIL_SMTP_USER,
-        pass: GMAIL_APP_PASSWORD.replace(/\\s+/g, "")
+        pass: GMAIL_APP_PASSWORD.replace(/\s+/g, "")
       }
     })
   : null;
