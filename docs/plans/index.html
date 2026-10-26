@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d1b">
   <meta name="description" content="Compare JPN Basic, Premium and Enterprise monthly plans.">
   <title>Plans | JPN</title>
-  <link rel="icon" type="image/svg+xml" href="/JPN/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -292,25 +292,25 @@
     @media(min-width:621px) and (max-width:850px){.enterprise-dialog{width:min(700px,100%)}#enterprise-form{gap:14px}}
     @media(prefers-reduced-motion:reduce){.enterprise-modal,.feedback-modal{backdrop-filter:none}}
   </style>
-  <link rel="stylesheet" href="/JPN/motion.css">
-<link rel="stylesheet" href="/JPN/theme.css">
-<link rel="stylesheet" href="/JPN/home-theme.css">
+  <link rel="stylesheet" href="/motion.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/home-theme.css">
 </head>
 
 <body>
   <header>
     <nav class="container" aria-label="Main navigation">
-      <a class="brand" href="/JPN/" aria-label="JPN home">
-        <img src="/JPN/favicon.svg" alt="JPN logo" style="width:42px;height:42px;display:block;flex-shrink:0;border-radius:13px">
+      <a class="brand" href="/" aria-label="JPN home">
+        <img src="/favicon.svg" alt="JPN logo" style="width:42px;height:42px;display:block;flex-shrink:0;border-radius:13px">
         <span>JPN<small>J-Private-Networking Group</small></span>
       </a>
 
       <div class="nav-links">
-        <a href="/JPN/">Home</a>
-        <a class="active" href="/JPN/plans/" aria-current="page">Plans</a>
-        <a class="button" id="nav-login" href="/JPN/login/">Log in</a>
-        <a class="button primary" id="nav-signup" href="/JPN/login/?mode=signup">Create account</a>
-        <a class="button primary" id="nav-dashboard" href="/JPN/dashboard/" hidden>Dashboard</a>
+        <a href="/">Home</a>
+        <a class="active" href="/plans/" aria-current="page">Plans</a>
+        <a class="button" id="nav-login" href="/login/">Log in</a>
+        <a class="button primary" id="nav-signup" href="/login/?mode=signup">Create account</a>
+        <a class="button primary" id="nav-dashboard" href="/dashboard/" hidden>Dashboard</a>
       </div>
     </nav>
   </header>
@@ -341,7 +341,7 @@
             <li><span class="no">—</span><span class="no">Quick Flash tool</span></li>
           </ul>
 
-          <a class="button primary" href="/JPN/login/?mode=signup&amp;plan=basic" id="basic-preorder-button">Request Basic plan</a>
+          <a class="button primary" href="/login/?mode=signup&amp;plan=basic" id="basic-preorder-button">Request Basic plan</a>
         </article>
 
         <article class="plan featured">
@@ -359,7 +359,7 @@
             <li><span class="no">—</span><span class="no">Quick Flash tool</span></li>
           </ul>
 
-          <a class="button primary" href="/JPN/login/?mode=signup&amp;plan=premium">Request Premium plan</a>
+          <a class="button primary" href="/login/?mode=signup&amp;plan=premium">Request Premium plan</a>
         </article>
 
         <article class="plan">
@@ -391,7 +391,7 @@
             <label>Work email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@organization.com"></label>
             <label class="full-row">Organization<input name="organization" maxlength="160" autocomplete="organization" placeholder="Organization name (optional)"></label>
             <label class="full-row">What are you looking for?<textarea name="message" required minlength="10" maxlength="4000" rows="5" placeholder="Number of users, use case, requirements…"></textarea></label>
-            <p class="full-row" style="font-size:.86rem;margin:0">By submitting, you agree that JPN may use these details to respond to your Enterprise inquiry. See our <a href="/JPN/privacy/" target="_blank" rel="noopener">Privacy Notice</a>.</p>
+            <p class="full-row" style="font-size:.86rem;margin:0">By submitting, you agree that JPN may use these details to respond to your Enterprise inquiry. See our <a href="/privacy/" target="_blank" rel="noopener">Privacy Notice</a>.</p>
             <button class="button primary full-row" id="enterprise-submit" type="submit">Send Enterprise inquiry</button>
           </form>
         </section>
@@ -412,14 +412,14 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="site-footer-inner"><span>© <span id="year">2026</span> JPN · J-Private-Networking Group</span><nav class="site-footer-links" aria-label="Public links"><a href="/JPN/">Home</a><a href="/JPN/terms/">Terms of Service</a><a href="/JPN/privacy/">Privacy Notice</a></nav></div></footer>
+  <footer class="site-footer"><div class="site-footer-inner"><span>© <span id="year">2026</span> JPN · J-Private-Networking Group</span><nav class="site-footer-links" aria-label="Public links"><a href="/">Home</a><a href="/terms/">Terms of Service</a><a href="/privacy/">Privacy Notice</a></nav></div></footer>
 
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
     const preorderButton = document.getElementById("basic-preorder-button");
     function updatePreorderButton() {
       if (!preorderButton) return;
-      preorderButton.href = "/JPN/login/?mode=signup&plan=basic";
+      preorderButton.href = "/login/?mode=signup&plan=basic";
       preorderButton.textContent = "Request Basic plan";
     }
     updatePreorderButton();
@@ -508,6 +508,6 @@
       }
     });
   </script>
-    <script src="/JPN/motion.js" defer></script>
+    <script src="/motion.js" defer></script>
 </body>
 </html>
