@@ -436,11 +436,11 @@
 
     <section class="section container" id="release">
       <div class="countdown-panel">
-        <span class="eyebrow">Your JPN account</span>
-        <h2>Everything starts <span class="gradient">in one place.</span></h2>
-        <p>Manage your account, review available plans, and access supported services from your JPN dashboard. New features and project updates will be published here as they become available.</p>
+        <span class="eyebrow">JPN release rollout</span>
+        <h2>Rolling out <span class="gradient">Wednesday to Friday.</span></h2>
+        <p>The JPN release is scheduled to roll out gradually from Wednesday, 28 October through Friday, 30 October 2026. Features will be enabled in stages during this window, so availability may differ between accounts. You can create an account and submit a plan request now; requests are reviewed manually.</p>
 
-        <p id="timer-message" aria-live="polite">Your JPN account is ready when you are.</p>
+        <p id="timer-message" aria-live="polite">JPN rollout: Wednesday, 28 October to Friday, 30 October 2026.</p>
         <a class="button primary" id="launch-action" href="/login/?mode=signup">Create account</a>
       </div>
     </section>
@@ -469,10 +469,10 @@
 
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    // Launch gates have been removed. Account creation and Basic requests are open now.
+    // Account creation is open while JPN features roll out in stages.
     const launchAction = document.getElementById("launch-action");
     const timerMessage = document.getElementById("timer-message");
-    if (timerMessage) timerMessage.textContent = "Your JPN account is ready when you are.";
+    if (timerMessage) timerMessage.textContent = "JPN rollout: Wednesday, 28 October to Friday, 30 October 2026.";
     if (launchAction) {
       launchAction.href = "/login/?mode=signup";
       launchAction.textContent = "Create account";
