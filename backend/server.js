@@ -22,7 +22,7 @@ const adminAuthClient = SUPABASE_SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, S
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 }) : null;
 const allowedOrigins = (process.env.FRONTEND_ORIGINS ||
-  "https://jigar1234nob.github.io,http://localhost:5500,http://127.0.0.1:5500")
+  "https://jpn.jigar.au,https://jigar1234nob.github.io,http://localhost:5500,http://127.0.0.1:5500")
   .split(",").map(value => value.trim()).filter(Boolean);
 
 const GMAIL_SMTP_USER = process.env.GMAIL_SMTP_USER;
@@ -107,7 +107,7 @@ app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
       email,
       password,
       options: {
-        redirectTo: "https://jigar1234nob.github.io/JPN/dashboard/?welcome=1",
+        redirectTo: "https://jpn.jigar.au/dashboard/?welcome=1",
         data: {
           jpn_terms_accepted_at: String(terms.acceptedAt || new Date().toISOString()),
           jpn_terms_version: "2026-10-22",
@@ -158,7 +158,7 @@ app.post("/api/auth/password-reset", authEmailLimiter, async (req, res) => {
     const { data, error } = await adminAuthClient.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: "https://jigar1234nob.github.io/JPN/login/" }
+      options: { redirectTo: "https://jpn.jigar.au/login/" }
     });
     // Use a generic response for unknown accounts to avoid exposing which addresses are registered.
     if (error || !data?.properties?.action_link) {
@@ -514,13 +514,13 @@ app.post("/api/auth/change-email", requireUser, authEmailLimiter, async (req, re
         type: "email_change_current",
         email: currentEmail,
         newEmail,
-        options: { redirectTo: "https://jigar1234nob.github.io/JPN/dashboard/" }
+        options: { redirectTo: "https://jpn.jigar.au/dashboard/" }
       }),
       adminAuthClient.auth.admin.generateLink({
         type: "email_change_new",
         email: currentEmail,
         newEmail,
-        options: { redirectTo: "https://jigar1234nob.github.io/JPN/dashboard/" }
+        options: { redirectTo: "https://jpn.jigar.au/dashboard/" }
       })
     ]);
     if (currentResult.error || newResult.error ||
@@ -574,7 +574,7 @@ app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) 
     const { data, error } = await adminAuthClient.auth.admin.generateLink({
       type: "invite",
       email,
-      options: { redirectTo: "https://jigar1234nob.github.io/JPN/invitation/" }
+      options: { redirectTo: "https://jpn.jigar.au/invitation/" }
     });
     if (error || !data?.properties?.action_link) {
       const duplicate = /already|registered|exists/i.test(error?.message || "");
@@ -587,7 +587,7 @@ app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) 
         "You have been invited to create your JPN account.",
         "",
         "Open this link to accept the invitation and set your password:",
-        "https://jigar1234nob.github.io/JPN/invitation/?token_hash=" + encodeURIComponent(data.properties.hashed_token) + "&type=invite",
+        "https://jpn.jigar.au/invitation/?token_hash=" + encodeURIComponent(data.properties.hashed_token) + "&type=invite",
         "",
         "If you were not expecting this invitation, you can ignore this email."
       ].join("\n")
