@@ -25,44 +25,6 @@ const allowedOrigins = (process.env.FRONTEND_ORIGINS ||
   "https://jpn.jigar.au,https://jigar1234nob.github.io,http://localhost:5500,http://127.0.0.1:5500")
   .split(",").map(value => value.trim()).filter(Boolean);
 
-const GMAIL_SMTP_USER = process.env.GMAIL_SMTP_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
-const JPN_NOTIFICATION_EMAIL = process.env.JPN_NOTIFICATION_EMAIL;
-const nodemailer = require("nodemailer");
-
-const gmailTransport = GMAIL_SMTP_USER && GMAIL_APP_PASSWORD
-  ? nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      requireTLS: true,
-      auth: {
-        user: GMAIL_SMTP_USER,
-        pass: GMAIL_APP_PASSWORD.replace(/\s+/g, "")
-      }
-    })
-  : null;
-
-async function sendGmailEmail({ to, subject, text }) {
-  if (!gmailTransport || !GMAIL_SMTP_USER) {
-    console.warn("Gmail email skipped: configure GMAIL_SMTP_USER and GMAIL_APP_PASSWORD.");
-    return { sent: false, reason: "not_configured" };
-  }
-  try {
-    const result = await gmailTransport.sendMail({
-      from: { name: "JPN", address: GMAIL_SMTP_USER },
-      to,
-      subject,
-      text
-    });
-    return { sent: true, id: result.messageId || null };
-  } catch (error) {
-    console.error("Gmail SMTP email failed:", error.message);
-    return { sent: false, reason: "provider_error" };
-  }
-}
-
-
 app.disable("x-powered-by");
 // Render terminates HTTPS in front of this service and forwards client IPs.
 // Trust one proxy hop so express-rate-limit can identify clients correctly.
@@ -83,31 +45,18 @@ app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 120, standardHeader
 const authEmailLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
 const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
 
-function requireGmailEmail(res) {
-  if (!gmailTransport || !GMAIL_SMTP_USER) {
-    res.status(503).json({ error: "JPN email delivery is not configured yet. Configure the Gmail SMTP variables in Render." });
-    return false;
-  }
-  return true;
-}
-
 app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
-  if (!adminAuthClient) return res.status(503).json({ error: "Account creation is temporarily unavailable." });
-  if (!requireGmailEmail(res)) return;
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const terms = req.body?.terms;
   if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
   if (password.length < 8 || password.length > 128) return res.status(400).json({ error: "Use a password between 8 and 128 characters." });
   if (!terms || terms.accepted !== true) return res.status(400).json({ error: "You must accept the Terms of Service before creating an account." });
-
   try {
-    const { data, error } = await adminAuthClient.auth.admin.generateLink({
-      type: "signup",
-      email,
-      password,
+    const { data, error } = await authClient.auth.signUp({
+      email, password,
       options: {
-        redirectTo: "https://jpn.jigar.au/dashboard/?welcome=1",
+        emailRedirectTo: "https://jpn.jigar.au/dashboard/?welcome=1",
         data: {
           jpn_terms_accepted_at: String(terms.acceptedAt || new Date().toISOString()),
           jpn_terms_version: "2026-10-22",
@@ -115,33 +64,11 @@ app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
         }
       }
     });
-    if (error || !data?.properties?.action_link) {
-      const duplicate = /already|registered|exists/i.test(error?.message || "");
-      return res.status(duplicate ? 409 : 400).json({
-        error: duplicate ? "An account may already exist for that email address. Try signing in or resetting your password." : "Could not create the account. Check the details and try again."
-      });
+    if (error) {
+      const duplicate = /already|registered|exists/i.test(error.message || "");
+      return res.status(duplicate ? 409 : 400).json({ error: duplicate ? "An account may already exist for that email address. Try signing in or resetting your password." : error.message || "Could not create the account. Check the details and try again." });
     }
-
-    const sent = await sendGmailEmail({
-      to: email,
-      subject: "Confirm your JPN email address",
-      text: [
-        "Welcome to JPN.",
-        "",
-        "Confirm your email address by opening this link:",
-        data.properties.action_link,
-        "",
-        "If you did not request a JPN account, you can ignore this email."
-      ].join("\n")
-    });
-    if (!sent.sent) {
-      if (data.user?.id) {
-        const { error: cleanupError } = await adminAuthClient.auth.admin.deleteUser(data.user.id);
-        if (cleanupError) console.error("Could not clean up an unconfirmed account after email failure:", cleanupError.message);
-      }
-      return res.status(503).json({ error: "JPN created no active account because the confirmation email could not be sent. Check the Render email settings and try again." });
-    }
-    return res.status(201).json({ message: "Account created. Check your inbox and spam folder for the JPN confirmation email." });
+    return res.status(201).json({ message: data.session ? "Account created successfully." : "Account created. Check your inbox and spam folder for the JPN confirmation email." });
   } catch (error) {
     console.error("JPN signup failed:", error.message);
     return res.status(500).json({ error: "Could not create your account right now." });
@@ -149,38 +76,11 @@ app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
 });
 
 app.post("/api/auth/password-reset", authEmailLimiter, async (req, res) => {
-  if (!adminAuthClient) return res.status(503).json({ error: "Password recovery is temporarily unavailable." });
-  if (!requireGmailEmail(res)) return;
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
-
   try {
-    const { data, error } = await adminAuthClient.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: { redirectTo: "https://jpn.jigar.au/login/" }
-    });
-    // Use a generic response for unknown accounts to avoid exposing which addresses are registered.
-    if (error || !data?.properties?.action_link) {
-      if (error && !/not found|no user|user not found/i.test(error.message || "")) {
-        console.error("Password reset link generation failed:", error.message);
-      }
-      return res.json({ message: "If an account exists for that address, a password reset email will be sent." });
-    }
-
-    const sent = await sendGmailEmail({
-      to: email,
-      subject: "Reset your JPN password",
-      text: [
-        "A password reset was requested for your JPN account.",
-        "",
-        "Use this link to choose a new password:",
-        data.properties.action_link,
-        "",
-        "If you did not request this, you can ignore this email."
-      ].join("\n")
-    });
-    if (!sent.sent) return res.status(503).json({ error: "The password reset email could not be sent. Check JPN's Render email settings and try again." });
+    const { error } = await authClient.auth.resetPasswordForEmail(email, { redirectTo: "https://jpn.jigar.au/login/" });
+    if (error) console.warn("Supabase password reset request returned an error:", error.message);
     return res.json({ message: "If an account exists for that address, a password reset email will be sent." });
   } catch (error) {
     console.error("JPN password reset failed:", error.message);
@@ -331,41 +231,8 @@ app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limi
     const { error } = await authClient.from("jpn_enterprise_inquiries").insert({ name, email, organization, message });
     if (error) throw error;
 
-    // Persist the inquiry first. Email delivery is best-effort so a temporary
-    // Gmail SMTP outage never loses a customer's submitted request.
-    if (GMAIL_SMTP_USER && GMAIL_APP_PASSWORD && JPN_NOTIFICATION_EMAIL) {
-      const adminText = [
-        "A new JPN Enterprise inquiry was submitted.",
-        "",
-        `Name: ${name}`,
-        `Email: ${email}`,
-        `Organization: ${organization || "Not provided"}`,
-        "",
-        "Message:",
-        message
-      ].join("\n");
-      await sendGmailEmail({
-        to: JPN_NOTIFICATION_EMAIL,
-        subject: "New JPN Enterprise inquiry",
-        text: adminText
-      });
-      await sendGmailEmail({
-        to: email,
-        subject: "We received your JPN Enterprise inquiry",
-        text: [
-          `Hi ${name},`,
-          "",
-          "Thanks for contacting JPN about Enterprise. We have received your inquiry for manual review.",
-          "The JPN team aims to contact you by email within 3–5 business days.",
-          "",
-          "This is an inquiry only. It does not activate a membership or trigger a payment.",
-          "",
-          "JPN · J-Private-Networking Group"
-        ].join("\n")
-      });
-    } else {
-      console.warn("Enterprise inquiry saved, but Gmail SMTP email notifications are not configured.");
-    }
+    // Enterprise inquiries are saved in Supabase and reviewed in the JPN admin console.
+    // Supabase Auth SMTP is for authentication messages, not arbitrary inquiry notifications.
     return res.status(201).json({ message: "Your Enterprise inquiry has been received. The JPN team can review it and contact you." });
   } catch (error) {
     console.error("Enterprise inquiry submission failed:", error.message);
@@ -501,64 +368,19 @@ app.get("/api/admin/enterprise-inquiries", requireUser, requireAdmin, async (req
 });
 
 app.post("/api/auth/change-email", requireUser, authEmailLimiter, async (req, res) => {
-  if (!adminAuthClient) return res.status(503).json({ error: "Email changes are temporarily unavailable." });
-  if (!requireGmailEmail(res)) return;
-  const currentEmail = String(req.user.email || "").trim().toLowerCase();
   const newEmail = String(req.body?.email || "").trim().toLowerCase();
-  if (!currentEmail || !validEmail(newEmail)) return res.status(400).json({ error: "Enter a valid new email address." });
-  if (currentEmail === newEmail) return res.status(400).json({ error: "That is already your account email address." });
-
+  if (!validEmail(newEmail)) return res.status(400).json({ error: "Enter a valid new email address." });
+  if (newEmail === String(req.user.email || "").trim().toLowerCase()) return res.status(400).json({ error: "That is already your account email address." });
   try {
-    const [currentResult, newResult] = await Promise.all([
-      adminAuthClient.auth.admin.generateLink({
-        type: "email_change_current",
-        email: currentEmail,
-        newEmail,
-        options: { redirectTo: "https://jpn.jigar.au/dashboard/" }
-      }),
-      adminAuthClient.auth.admin.generateLink({
-        type: "email_change_new",
-        email: currentEmail,
-        newEmail,
-        options: { redirectTo: "https://jpn.jigar.au/dashboard/" }
-      })
-    ]);
-    if (currentResult.error || newResult.error ||
-        !currentResult.data?.properties?.action_link || !newResult.data?.properties?.action_link) {
-      console.error("Email change link generation failed:", currentResult.error?.message || newResult.error?.message || "Missing action link");
-      return res.status(400).json({ error: "Could not start the email change. Check that secure email change is enabled in Supabase Auth settings." });
+    const { error } = await req.userSupabase.auth.updateUser(
+      { email: newEmail },
+      { emailRedirectTo: "https://jpn.jigar.au/dashboard/" }
+    );
+    if (error) {
+      console.error("Supabase email change request failed:", error.message);
+      return res.status(400).json({ error: error.message || "Could not start the email change." });
     }
-
-    const [currentSent, newSent] = await Promise.all([
-      sendGmailEmail({
-        to: currentEmail,
-        subject: "Confirm your JPN email change",
-        text: [
-          "A request was made to change your JPN account email to " + newEmail + ".",
-          "",
-          "Confirm that you requested this change:",
-          currentResult.data.properties.action_link,
-          "",
-          "If you did not request this, ignore this email and do not confirm the change."
-        ].join("\n")
-      }),
-      sendGmailEmail({
-        to: newEmail,
-        subject: "Confirm your new JPN email for JPN",
-        text: [
-          "A request was made to use this address for a JPN account.",
-          "",
-          "Confirm the new email address:",
-          newResult.data.properties.action_link,
-          "",
-          "If you did not request this, ignore this email."
-        ].join("\n")
-      })
-    ]);
-    if (!currentSent.sent || !newSent.sent) {
-      return res.status(503).json({ error: "One or both confirmation emails could not be sent. Check Render's Gmail SMTP settings before requesting the change again." });
-    }
-    return res.json({ message: "Confirmation links were sent to your current and new email addresses. Confirm both to finish the change." });
+    return res.json({ message: "Supabase has sent the email-change confirmation message(s). Check the current and new inboxes as required by your Auth settings." });
   } catch (error) {
     console.error("JPN email change failed:", error.message);
     return res.status(500).json({ error: "Could not request an email change right now." });
@@ -567,39 +389,22 @@ app.post("/api/auth/change-email", requireUser, authEmailLimiter, async (req, re
 
 app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) => {
   if (!adminAuthClient) return res.status(503).json({ error: "Account invitations are temporarily unavailable. Please try again later." });
-  if (!requireGmailEmail(res)) return;
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
   try {
-    const { data, error } = await adminAuthClient.auth.admin.generateLink({
-      type: "invite",
-      email,
-      options: { redirectTo: "https://jpn.jigar.au/invitation/" }
+    const { data, error } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: "https://jpn.jigar.au/invitation/"
     });
-    if (error || !data?.properties?.action_link) {
+    if (error || !data?.user) {
       const duplicate = /already|registered|exists/i.test(error?.message || "");
-      return res.status(duplicate ? 409 : 400).json({ error: duplicate ? "An account already exists for that email address." : "Could not create the invitation. Check the email address and try again." });
+      return res.status(duplicate ? 409 : 400).json({
+        error: duplicate ? "An account already exists for that email address." : error?.message || "Could not create the invitation. Check the email address and try again."
+      });
     }
-    const sent = await sendGmailEmail({
-      to: email,
-      subject: "You're invited to JPN",
-      text: [
-        "You have been invited to create your JPN account.",
-        "",
-        "Open this link to accept the invitation and set your password:",
-        "https://jpn.jigar.au/invitation/?token_hash=" + encodeURIComponent(data.properties.hashed_token) + "&type=invite",
-        "",
-        "If you were not expecting this invitation, you can ignore this email."
-      ].join("\n")
+    return res.status(201).json({
+      user: { id: data.user.id, email: data.user.email || email },
+      message: "Invitation sent by Supabase Auth. The recipient should check their inbox and spam folder."
     });
-    if (!sent.sent) {
-      if (data.user?.id) {
-        const { error: cleanupError } = await adminAuthClient.auth.admin.deleteUser(data.user.id);
-        if (cleanupError) console.error("Could not clean up an invited account after email failure:", cleanupError.message);
-      }
-      return res.status(503).json({ error: "The invitation email could not be sent. Check Render's Gmail SMTP settings and try again." });
-    }
-    return res.status(201).json({ user: { id: data.user?.id || null, email: data.user?.email || email }, message: "Invitation sent through JPN email delivery." });
   } catch (error) {
     console.error("Admin invitation failed:", error.message);
     return res.status(500).json({ error: "Could not create the account invitation." });
