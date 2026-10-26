@@ -22,7 +22,7 @@ const adminAuthClient = SUPABASE_SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, S
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 }) : null;
 const allowedOrigins = (process.env.FRONTEND_ORIGINS ||
-  "https://jpn.jigar.au,https://jigar1234nob.github.io,http://localhost:5500,http://127.0.0.1:5500")
+  "https://jigar1234nob.github.io/JPN,https://jigar1234nob.github.io,http://localhost:5500,http://127.0.0.1:5500")
   .split(",").map(value => value.trim()).filter(Boolean);
 
 app.disable("x-powered-by");
@@ -56,7 +56,7 @@ app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
     const { data, error } = await authClient.auth.signUp({
       email, password,
       options: {
-        emailRedirectTo: "https://jpn.jigar.au/dashboard/?welcome=1",
+        emailRedirectTo: "https://jigar1234nob.github.io/JPN/dashboard/?welcome=1",
         data: {
           jpn_terms_accepted_at: String(terms.acceptedAt || new Date().toISOString()),
           jpn_terms_version: "2026-10-22",
@@ -79,7 +79,7 @@ app.post("/api/auth/password-reset", authEmailLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
   try {
-    const { error } = await authClient.auth.resetPasswordForEmail(email, { redirectTo: "https://jpn.jigar.au/login/" });
+    const { error } = await authClient.auth.resetPasswordForEmail(email, { redirectTo: "https://jigar1234nob.github.io/JPN/login/" });
     if (error) console.warn("Supabase password reset request returned an error:", error.message);
     return res.json({ message: "If an account exists for that address, a password reset email will be sent." });
   } catch (error) {
@@ -374,7 +374,7 @@ app.post("/api/auth/change-email", requireUser, authEmailLimiter, async (req, re
   try {
     const { error } = await req.userSupabase.auth.updateUser(
       { email: newEmail },
-      { emailRedirectTo: "https://jpn.jigar.au/dashboard/" }
+      { emailRedirectTo: "https://jigar1234nob.github.io/JPN/dashboard/" }
     );
     if (error) {
       console.error("Supabase email change request failed:", error.message);
@@ -393,7 +393,7 @@ app.post("/api/admin/users/invite", requireUser, requireAdmin, async (req, res) 
   if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
   try {
     const { data, error } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: "https://jpn.jigar.au/invitation/"
+      redirectTo: "https://jigar1234nob.github.io/JPN/invitation/"
     });
     if (error || !data?.user) {
       const duplicate = /already|registered|exists/i.test(error?.message || "");
