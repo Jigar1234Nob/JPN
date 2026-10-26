@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080d1b">
 <title>Set your JPN password</title><meta name="description" content="Finish setting up your invited JPN account by choosing a password.">
-<link rel="icon" type="image/svg+xml" href="/JPN/favicon.svg"><link rel="stylesheet" href="/theme.css">
+<link rel="icon" type="image/svg+xml" href="/JPN/JPN/favicon.svg"><link rel="stylesheet" href="/JPN/theme.css">
 <style>
 :root{color-scheme:dark;--bg:#10131c;--panel:#191e2b;--text:#f6f7fb;--muted:#a7afc1;--cyan:#53d9f0;--border:rgba(204,216,255,.15)}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#53d9f018,transparent 34rem),var(--bg);color:var(--text);font:15px/1.6 system-ui,sans-serif;display:flex;flex-direction:column}a{color:var(--cyan)}header,footer{padding:20px clamp(20px,5vw,70px);border-bottom:1px solid #ffffff18}header a{text-decoration:none;font-weight:700}main{width:min(480px,calc(100% - 32px));margin:auto;padding:40px 0}.card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:clamp(24px,5vw,38px);box-shadow:0 24px 80px #0004}.eyebrow{color:var(--cyan);font-size:.76rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase}h1{font-size:clamp(2rem,7vw,2.8rem);line-height:1.1;letter-spacing:-.05em;margin:12px 0}p{color:var(--muted)}label{display:block;margin:18px 0 7px;font-weight:700;font-size:.88rem}input{width:100%;padding:13px;border:1px solid #50596d;border-radius:9px;background:#0e1119;color:#fff;font:inherit}input:focus{outline:2px solid var(--cyan);outline-offset:2px}.primary{width:100%;margin-top:22px;padding:13px;border:0;border-radius:9px;background:var(--cyan);color:#07111b;font:800 .95rem system-ui,sans-serif;cursor:pointer}.primary:disabled{opacity:.6;cursor:wait}.notice{margin-top:16px;padding:12px;border:1px solid var(--border);border-radius:9px;color:var(--muted);overflow-wrap:anywhere}.notice:empty{display:none}.notice[data-kind="error"]{border-color:#e58b8b;color:#ffb8b8}.notice[data-kind="success"]{border-color:#75d9a6;color:#9bf0c2}.hint{font-size:.8rem}footer{margin-top:auto;border-top:1px solid #ffffff18;border-bottom:0;color:var(--muted);font-size:.82rem}footer nav{display:flex;flex-wrap:wrap;gap:16px;margin-top:6px}footer a{text-decoration:none}
 
@@ -17,10 +17,10 @@ body.invite-locked header,body.invite-locked main,body.invite-locked footer{visi
 
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/home-theme.css">
+<link rel="stylesheet" href="/JPN/home-theme.css">
 </head>
 <body class="invite-locked">
-<header><a href="/" style="display:inline-flex;align-items:center;gap:12px"><img src="/JPN/favicon.svg" alt="JPN logo" style="width:40px;height:40px;display:block;border-radius:12px"><span>JPN · J-Private-Networking Group</span></a></header>
+<header><a href="/JPN/" style="display:inline-flex;align-items:center;gap:12px"><img src="/JPN/JPN/favicon.svg" alt="JPN logo" style="width:40px;height:40px;display:block;border-radius:12px"><span>JPN · J-Private-Networking Group</span></a></header>
 <main><section class="card">
 <div class="eyebrow">Account invitation</div>
 <h1>Set your password.</h1>
@@ -33,7 +33,7 @@ body.invite-locked header,body.invite-locked main,body.invite-locked footer{visi
 <div class="notice" id="message" role="status" aria-live="polite">Checking your invitation link…</div>
 <p class="hint">Invitation links expire. If this link is invalid or expired, ask a JPN administrator to send a new invitation.</p>
 </section></main>
-<footer class="site-footer"><div class="site-footer-inner"><span>© <span class="footer-year">2026</span> JPN · J-Private-Networking Group</span><nav class="site-footer-links" aria-label="Public links"><a href="/">Home</a><a href="/plans/">Plans</a><a href="/terms/">Terms of Service</a><a href="/privacy/">Privacy Notice</a></nav></div></footer>
+<footer class="site-footer"><div class="site-footer-inner"><span>© <span class="footer-year">2026</span> JPN · J-Private-Networking Group</span><nav class="site-footer-links" aria-label="Public links"><a href="/JPN/">Home</a><a href="/JPN/plans/">Plans</a><a href="/JPN/terms/">Terms of Service</a><a href="/JPN/privacy/">Privacy Notice</a></nav></div></footer>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "../supabase-config.js";
@@ -89,5 +89,5 @@ form.addEventListener("submit",async event=>{
   finally{save.disabled=false;}
 });
 </script>
-<script src="/motion.js" defer></script>
+<script src="/JPN/motion.js" defer></script>
 </body></html>
