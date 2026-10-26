@@ -45,26 +45,23 @@ async function initialise(){
   const params=new URLSearchParams(location.search);
   const tokenHash=params.get("token_hash");
   const type=params.get("type");
+  const code=params.get("code");
 
-  // This page is only for a fresh, valid Supabase invitation link.
-  // A normal visit, recovery link, or missing token must not reveal the page.
-  if(!tokenHash || type!=="invite"){
-    location.replace("/");
-    return;
-  }
-
-  const {error:verifyError}=await supabase.auth.verifyOtp({token_hash:tokenHash,type:"invite"});
-  if(verifyError){
-    location.replace("/");
-    return;
+  // Support both Supabase Auth's standard invitation redirect and token-hash links.
+  if(tokenHash && type==="invite"){
+    const {error:verifyError}=await supabase.auth.verifyOtp({token_hash:tokenHash,type:"invite"});
+    if(verifyError){location.replace("/");return;}
+  }else if(code){
+    const {error:exchangeError}=await supabase.auth.exchangeCodeForSession(code);
+    if(exchangeError){location.replace("/");return;}
+  }else{
+    const {data:{session}}=await supabase.auth.getSession();
+    if(!session || !session.user?.email_confirmed_at){location.replace("/");return;}
   }
 
   history.replaceState(null,"",location.pathname);
   const {data:{session},error}=await supabase.auth.getSession();
-  if(error || !session){
-    location.replace("/");
-    return;
-  }
+  if(error || !session){location.replace("/");return;}
 
   ready=true;
   form.querySelectorAll("input,button").forEach(el=>el.disabled=false);
