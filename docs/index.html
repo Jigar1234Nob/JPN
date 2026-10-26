@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d1b">
   <meta name="description" content="JPN by J-Private-Networking Group: digital tools, software development, and network technology.">
   <title>JPN | Technology, Made Useful.</title>
-  <link rel="icon" type="image/svg+xml" href="/JPN/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="/JPN/JPN/favicon.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -349,25 +349,25 @@
 @media(max-width:600px){.site-footer-inner{width:calc(100% - 32px);align-items:flex-start;flex-direction:column;gap:10px}.site-footer-links{justify-content:flex-start;gap:8px 16px}}
 
 </style>
-  <link rel="stylesheet" href="/motion.css">
-<link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="/JPN/motion.css">
+<link rel="stylesheet" href="/JPN/theme.css">
 </head>
 
 <body>
   <header>
     <nav class="container" aria-label="Main navigation">
-      <a class="brand" href="/" aria-label="JPN home">
-        <img src="/JPN/favicon.svg" alt="JPN logo" style="width:42px;height:42px;display:block;flex-shrink:0;border-radius:13px">
+      <a class="brand" href="/JPN/" aria-label="JPN home">
+        <img src="/JPN/JPN/favicon.svg" alt="JPN logo" style="width:42px;height:42px;display:block;flex-shrink:0;border-radius:13px">
         <span>JPN<small>J-Private-Networking Group</small></span>
       </a>
 
       <div class="nav-links">
-        <a class="active" href="/" aria-current="page">Home</a>
-        <a href="/plans/">Plans</a>
-        <span id="member-nav" hidden style="display:contents"><a href="/dashboard/">My Account</a><a href="/dashboard/#downloads">Downloads</a></span>
-        <a class="button" id="nav-login" href="/login/">Log in</a>
-        <a class="button primary" id="nav-signup" href="/login/?mode=signup">Create account</a>
-        <a class="button primary" id="nav-dashboard" href="/dashboard/" hidden>Dashboard</a>
+        <a class="active" href="/JPN/" aria-current="page">Home</a>
+        <a href="/JPN/plans/">Plans</a>
+        <span id="member-nav" hidden style="display:contents"><a href="/JPN/dashboard/">My Account</a><a href="/JPN/dashboard/#downloads">Downloads</a></span>
+        <a class="button" id="nav-login" href="/JPN/login/">Log in</a>
+        <a class="button primary" id="nav-signup" href="/JPN/login/?mode=signup">Create account</a>
+        <a class="button primary" id="nav-dashboard" href="/JPN/dashboard/" hidden>Dashboard</a>
       </div>
     </nav>
   </header>
@@ -383,7 +383,7 @@
         </p>
 
         <div class="actions">
-          <a class="button primary" href="/plans/">Explore JPN ↗</a>
+          <a class="button primary" href="/JPN/plans/">Explore JPN ↗</a>
           <a class="button" href="#features">Explore JPN</a>
         </div>
       </div>
@@ -441,12 +441,12 @@
         <p>The JPN release is scheduled to roll out gradually from Wednesday, 28 October through Friday, 30 October 2026. Features will be enabled in stages during this window, so availability may differ between accounts. You can create an account and submit a plan request now; requests are reviewed manually.</p>
 
         <p id="timer-message" aria-live="polite">JPN rollout: Wednesday, 28 October to Friday, 30 October 2026.</p>
-        <a class="button primary" id="launch-action" href="/login/?mode=signup">Create account</a>
+        <a class="button primary" id="launch-action" href="/JPN/login/?mode=signup">Create account</a>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer"><div class="site-footer-inner"><span>© <span id="year">2026</span> JPN · J-Private-Networking Group</span><nav class="site-footer-links" aria-label="Public links"><a href="/plans/">Plans</a><a href="/terms/">Terms of Service</a><a href="/privacy/">Privacy Notice</a></nav></div></footer>
+  <footer class="site-footer"><div class="site-footer-inner"><span>© <span id="year">2026</span> JPN · J-Private-Networking Group</span><nav class="site-footer-links" aria-label="Public links"><a href="/JPN/plans/">Plans</a><a href="/JPN/terms/">Terms of Service</a><a href="/JPN/privacy/">Privacy Notice</a></nav></div></footer>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -474,10 +474,10 @@
     const timerMessage = document.getElementById("timer-message");
     if (timerMessage) timerMessage.textContent = "JPN rollout: Wednesday, 28 October to Friday, 30 October 2026.";
     if (launchAction) {
-      launchAction.href = "/login/?mode=signup";
+      launchAction.href = "/JPN/JPN/login/?mode=signup";
       launchAction.textContent = "Create account";
     }
   </script>
-  <script src="/motion.js" defer></script>
+  <script src="/JPN/motion.js" defer></script>
 </body>
 </html>
