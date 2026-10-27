@@ -20,6 +20,7 @@
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/JPN/home-theme.css">
+ <link rel="stylesheet" href="/JPN/cookies.css">
 </head>
 <body>
 <header><div class="wrap brand"><a href="/JPN/" aria-label="JPN home" style="display:block;width:42px;height:42px;flex-shrink:0"><img src="/JPN/favicon.svg" alt="JPN logo" style="width:42px;height:42px;display:block;border-radius:12px"></a><div>JPN Admin Console<div class="muted" style="font-size:.72rem;font-weight:500">J-Private-Networking Group · restricted tools</div></div><a href="/JPN/dashboard/" style="margin-left:auto">My account ↗</a></div></header>
@@ -140,4 +141,5 @@ $("#build-form").addEventListener("submit",async e=>{e.preventDefault();const bu
 supabase.auth.onAuthStateChange((event,newSession)=>{if(event==="SIGNED_OUT"||!newSession)location.replace("/login/")});
 </script>
 <script src="/JPN/motion.js" defer></script>
+ <script src="/JPN/cookies.js" defer></script>
 </body></html>
