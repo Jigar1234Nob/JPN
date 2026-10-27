@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="/JPN/motion.css">
 <link rel="stylesheet" href="/JPN/theme.css">
 <link rel="stylesheet" href="/JPN/home-theme.css">
+ <link rel="stylesheet" href="/JPN/cookies.css">
 </head>
 <body>
 <header class="topbar"><a class="brand" href="/JPN/" aria-label="JPN home"><img src="/JPN/favicon.svg" alt="JPN logo"><span>JPN<small>J-Private-Networking Group</small></span></a><nav class="toplinks" aria-label="Main navigation"><a href="/JPN/">Home</a><a href="/JPN/plans/">Plans</a><span id="member-nav" hidden><a href="/JPN/dashboard/">My account</a> · <a href="/JPN/dashboard/#downloads">Downloads</a></span><a class="signup-link" href="#account" id="top-signup">Create account</a></nav></header>
@@ -68,4 +69,5 @@ form.addEventListener("submit",async e=>{e.preventDefault();if(mode==="signup"&&
 $("#reset").addEventListener("click",async()=>{const email=$("#email").value.trim();if(!email){say("Enter your email address first.","error");$("#email").focus();return}try{const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:"https://jigar1234nob.github.io/JPN/login/"});if(error)throw error;say("If an account exists for that address, Supabase will send a password reset email.","success")}catch(err){say(err.message||"Unable to request a reset email.","error")}});
 $("#recovery-form").addEventListener("submit",async e=>{e.preventDefault();const next=$("#recovery-password").value,confirm=$("#recovery-confirm").value,button=$("#recovery-submit");if(next.length<8){say("Use a password with at least 8 characters.","error");return}if(next!==confirm){say("The passwords do not match.","error");return}button.disabled=true;say("Saving your new password…");try{const {error}=await supabase.auth.updateUser({password:next});if(error)throw error;say("Password updated. Taking you to your account…","success");setTimeout(()=>location.replace("/dashboard/"),900)}catch(err){say(err.message||"Unable to update password.","error")}finally{button.disabled=false}});
 </script>  <script src="/JPN/motion.js" defer></script>
+ <script src="/JPN/cookies.js" defer></script>
 </body></html>
