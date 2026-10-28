@@ -28,6 +28,7 @@
 <div class="eyebrow">Administration</div><h1>Membership control</h1><p class="muted">Manually grant or revoke paid membership. No checkout or automatic billing is enabled.</p>
 <div id="status" class="notice" role="status" aria-live="polite">Verifying administrator access…</div>
 <section id="console" hidden>
+<div class="panel"><h2>Global download access</h2><p class="muted">Emergency switch for the entire JPN download library. When OFF, paid memberships and administrator status do not grant download access. Only accounts explicitly marked as testers can download. When ON, active Premium/Enterprise members and testers can access downloads.</p><div class="formrow"><span id="download-gate-status" class="pill off">Checking setting…</span><button id="download-gate-toggle" class="danger" type="button" disabled>Loading…</button><button id="download-gate-refresh" type="button">Refresh status</button></div><div id="download-gate-help" class="foot" style="margin-top:12px">Access is enforced by the backend and Supabase database policies, not just by hiding dashboard buttons.</div></div>
 <div class="panel"><h2>Create an account</h2><p class="muted">Send a secure invitation email. The person finishes setting up their account through Supabase; no password is shown or stored in this admin page.</p>
 <form id="invite-form" class="formrow"><input id="invite-email" type="email" autocomplete="email" placeholder="new-member@example.com" aria-label="Email address for new account" required><button class="primary" id="invite-button" type="submit">Send invitation</button></form>
 <div class="foot" id="invite-status" role="status" aria-live="polite" style="margin-top:12px"></div></div>
@@ -52,6 +53,31 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, JPN_API_BASE } from "../supabase-config.js";
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=s=>document.querySelector(s), status=$("#status"), consoleEl=$("#console"), results=$("#results");
+let downloadGateEnabled=false;
+async function loadDownloadGate(){
+ const badge=$("#download-gate-status"),button=$("#download-gate-toggle");
+ try{
+  const data=await api("/api/admin/download-access");
+  downloadGateEnabled=data.enabled===true;
+  badge.textContent=downloadGateEnabled?"DOWNLOADS ENABLED":"DOWNLOADS LOCKED";
+  badge.className="pill "+(downloadGateEnabled?"":"off");
+  button.textContent=downloadGateEnabled?"Disable all downloads":"Enable downloads";
+  button.className=downloadGateEnabled?"danger":"primary";
+  button.disabled=false;
+  $("#download-gate-help").textContent=downloadGateEnabled?"General access is ON. Active Premium/Enterprise members and approved testers can download.":"Global access is OFF. Only accounts marked as testers can download, including paid accounts not on the tester list.";
+ }catch(err){
+  badge.textContent="SETTING UNAVAILABLE";badge.className="pill off";button.textContent="Unavailable";button.disabled=true;
+  $("#download-gate-help").textContent=err.message+" Run backend/sql/008_download_kill_switch_and_testers.sql in Supabase SQL Editor.";
+ }
+}
+$("#download-gate-toggle").addEventListener("click",async()=>{
+ const next=!downloadGateEnabled;
+ if(!confirm(next?"Enable downloads for all active Premium/Enterprise members and approved testers?":"Disable downloads for everyone except explicitly approved testers?"))return;
+ const button=$("#download-gate-toggle");button.disabled=true;button.textContent="Saving…";
+ try{const data=await api("/api/admin/download-access",{method:"PATCH",body:JSON.stringify({enabled:next})});say(data.message,"success");await loadDownloadGate()}
+ catch(err){say(err.message,"error");button.disabled=false;button.textContent=downloadGateEnabled?"Disable all downloads":"Enable downloads"}
+});
+$("#download-gate-refresh").addEventListener("click",loadDownloadGate);
 const apiBase=JPN_API_BASE.endsWith("/")?JPN_API_BASE.slice(0,-1):JPN_API_BASE;
 function say(text,kind="info"){status.textContent=text;status.dataset.kind=kind}
 async function api(path,options={}){
@@ -68,14 +94,15 @@ function renderUsers(users){
  $("#count").textContent=users.length+" account"+(users.length===1?"":"s");
  if(!users.length){results.innerHTML='<div class="empty">No matching accounts found.</div>';return}
  results.innerHTML=users.map(user=>{
-  const id=escapeHtml(user.user_id), plan=user.plan|| (user.paid?"premium":"free"), disabled=!!user.disabled, expired=plan!=="free"&&!!user.expires_at&&new Date(user.expires_at).getTime()<=Date.now();
+  const id=escapeHtml(user.user_id), plan=user.plan|| (user.paid?"premium":"free"), disabled=!!user.disabled, tester=!!user.tester, expired=plan!=="free"&&!!user.expires_at&&new Date(user.expires_at).getTime()<=Date.now();
   const expires=user.expires_at?' <span class="meta">Until '+escapeHtml(new Date(user.expires_at).toLocaleString())+'</span>':'';
   const requestPending=["premium","enterprise"].includes(String(user.plan_request||"").toLowerCase())&&user.plan_request_status==="pending";
   const request=requestPending?'<div style="margin-top:8px"><span class="pill">+escapeHtml(String(user.plan_request||"plan").toUpperCase())+' REQUEST PENDING</span><div class="meta">Requested: '+escapeHtml(user.plan_requested_at?new Date(user.plan_requested_at).toLocaleString():"date unavailable")+'</div></div>':'';
-  return '<article class="user" data-user-id="'+id+'"><div><div class="email">'+escapeHtml(user.email||"(no email)")+'</div><div class="meta">Account ID: '+id+'</div><div class="meta">Created: '+escapeHtml(user.created_at?new Date(user.created_at).toLocaleDateString():"unknown")+'</div><div style="margin-top:8px"><span class="pill '+(disabled?"off":plan==="free"?"off":"")+'">'+(disabled?"ACCOUNT DISABLED":plan==="free"?"FREE PLAN":expired?escapeHtml(plan.toUpperCase())+" EXPIRED":user.paid?escapeHtml(plan.toUpperCase())+" ACTIVE":escapeHtml(plan.toUpperCase())+" INACTIVE")+'</span>'+expires+request+'</div></div><div class="user-actions" style="max-width:440px"><label class="meta" for="plan-'+id+'">Membership plan</label><select id="plan-'+id+'" data-plan-select="'+id+'" aria-label="Membership plan"><option value="free" '+(plan==="free"?"selected":"")+'>No access</option>'+(plan==="basic"?'<option value="basic" selected disabled>Legacy membership (existing)</option>':'')+'<option value="premium" '+(plan==="premium"?"selected":"")+'>Premium</option><option value="enterprise" '+(plan==="enterprise"?"selected":"")+'>Enterprise</option></select><label class="meta" for="expiry-'+id+'">Optional expiry</label><input type="date" id="expiry-'+id+'" aria-label="Optional membership expiry date"><button class="primary" data-set-plan="'+id+'">Save plan</button><button class="'+(disabled?"primary":"danger")+'" data-disable-user="'+id+'" data-disabled="'+disabled+'">'+(disabled?"Enable account":"Disable account")+'</button></div></article>';
+  return '<article class="user" data-user-id="'+id+'"><div><div class="email">'+escapeHtml(user.email||"(no email)")+'</div><div class="meta">Account ID: '+id+'</div><div class="meta">Created: '+escapeHtml(user.created_at?new Date(user.created_at).toLocaleDateString():"unknown")+'</div><div style="margin-top:8px"><span class="pill '+(disabled?"off":plan==="free"?"off":"")+'">'+(disabled?"ACCOUNT DISABLED":plan==="free"?"FREE PLAN":expired?escapeHtml(plan.toUpperCase())+" EXPIRED":user.paid?escapeHtml(plan.toUpperCase())+" ACTIVE":escapeHtml(plan.toUpperCase())+" INACTIVE")+'</span>'+expires+request+'</div></div><div class="user-actions" style="max-width:440px"><label class="meta" for="plan-'+id+'">Membership plan</label><select id="plan-'+id+'" data-plan-select="'+id+'" aria-label="Membership plan"><option value="free" '+(plan==="free"?"selected":"")+'>No access</option>'+(plan==="basic"?'<option value="basic" selected disabled>Legacy membership (existing)</option>':'')+'<option value="premium" '+(plan==="premium"?"selected":"")+'>Premium</option><option value="enterprise" '+(plan==="enterprise"?"selected":"")+'>Enterprise</option></select><label class="meta" for="expiry-'+id+'">Optional expiry</label><input type="date" id="expiry-'+id+'" aria-label="Optional membership expiry date"><button class="primary" data-set-plan="'+id+'">Save plan</button><button class="'+(tester?"danger":"")+'" data-tester-user="'+id+'" data-tester="'+tester+'">'+(tester?"Remove tester access":"Allow as tester")+'</button><button class="'+(disabled?"primary":"danger")+'" data-disable-user="'+id+'" data-disabled="'+disabled+'">'+(disabled?"Enable account":"Disable account")+'</button></div></article>';
  }).join("");
  results.querySelectorAll("[data-set-plan]").forEach(button=>button.addEventListener("click",()=>changePlan(button)));
  results.querySelectorAll("[data-disable-user]").forEach(button=>button.addEventListener("click",()=>changeDisabled(button)));
+ results.querySelectorAll("[data-tester-user]").forEach(button=>button.addEventListener("click",()=>changeTester(button)));
 }
 async function searchUsers(email){
  $("#search-button").disabled=true;results.innerHTML='<div class="empty">Searching securely…</div>';
@@ -89,6 +116,13 @@ async function changePlan(button){
  button.disabled=true;button.textContent="Saving…";
  try{await api("/api/admin/users/"+encodeURIComponent(id)+"/plan",{method:"PATCH",body:JSON.stringify({plan,expires_at})});say("Membership updated to "+plan.toUpperCase()+".","success");await searchUsers($("#email-query").value.trim())}
  catch(err){say(err.message||"Could not update membership.","error");button.disabled=false;button.textContent="Save plan"}
+}
+async function changeTester(button){
+ const id=button.dataset.testerUser,currentlyTester=button.dataset.tester==="true";
+ if(!confirm((currentlyTester?"Remove":"Grant")+" tester download access? "+(currentlyTester?"This account will no longer bypass the global download lock.":"This account will be able to download even while global downloads are disabled.")))return;
+ button.disabled=true;button.textContent="Saving…";
+ try{const data=await api("/api/admin/users/"+encodeURIComponent(id)+"/tester",{method:"PATCH",body:JSON.stringify({tester:!currentlyTester})});say(data.message||"Tester access updated.","success");await searchUsers($("#email-query").value.trim())}
+ catch(err){say(err.message||"Could not update tester access.","error");button.disabled=false;button.textContent=currentlyTester?"Remove tester access":"Allow as tester"}
 }
 async function changeDisabled(button){
  const id=button.dataset.disableUser,currentlyDisabled=button.dataset.disabled==="true";
@@ -115,7 +149,7 @@ $("#invite-form").addEventListener("submit",async e=>{
 const {data:{session},error}=await supabase.auth.getSession();
 if(error||!session){location.replace("/login/")}
 else{
- try{const identity=await api("/api/me");if(identity.user?.role!=="admin"){say("Access denied. This account does not have the server-assigned admin role.","error");}else{consoleEl.hidden=false;say("Administrator verified. Account, membership, resources, and inquiry controls are enabled.","success");await loadResourcesAdmin();}}
+ try{const identity=await api("/api/me");if(identity.user?.role!=="admin"){say("Access denied. This account does not have the server-assigned admin role.","error");}else{consoleEl.hidden=false;say("Administrator verified. Account, membership, downloads, tester access, resources, and inquiry controls are enabled.","success");await Promise.all([loadResourcesAdmin(),loadDownloadGate()]);}}
  catch(err){say(err.message,"error")}
 }
 async function loadResourcesAdmin(){
