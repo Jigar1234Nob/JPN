@@ -10,7 +10,9 @@ Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level s
 - GET /api/me - authenticated account identity, role, and membership status
 - GET /api/profile and PATCH /api/profile - current user's profile
 - GET /api/entitlement - current user's server-side paid status
-- GET /api/downloads - lists published downloads only for active paid members (admins can access)
+- GET /api/downloads - lists published downloads only when the global switch is enabled and the user is Premium/Enterprise or an approved tester
+- GET/PATCH /api/admin/download-access - administrator-only global downloads kill switch
+- PATCH /api/admin/users/:id/tester - administrator-only per-account tester allowlist
 - POST /api/downloads/:id/url - creates a private signed download link lasting 60 seconds
 - POST /api/admin/users/invite - admin-only account invitation by email
 - GET /api/admin/users?email=... - admin-only member search
@@ -32,8 +34,12 @@ In Supabase Dashboard > SQL Editor, run these scripts in order:
 2. backend/sql/002_entitlements_and_downloads.sql
 3. backend/sql/003_plan_requests.sql
 4. backend/sql/004_tiers_resources_and_account_controls.sql
+5. backend/sql/005_fix_ambiguous_admin_plan_function.sql
+6. backend/sql/006_enterprise_inquiries_and_plan_requests.sql
+7. backend/sql/007_remove_basic_plan.sql
+8. backend/sql/008_download_kill_switch_and_testers.sql
 
-The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds plan-request details to admin search. The fourth script adds Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply migrations 001 through 007 in order before using the expanded admin console. Migration 007 removes the retired entry-level plan from new assignments while preserving existing legacy entitlements.
+The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds plan-request details to admin search. The fourth script adds Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply migrations 001 through 008 in order before using the expanded admin console. Migration 007 removes the retired entry-level plan from new assignments while preserving existing legacy entitlements.
 
 ## 2. Create your administrator account
 
@@ -82,7 +88,7 @@ The bucket jpn-private-downloads is private. Upload the release file to it using
 
 Replace object_path with the exact path of the uploaded file. The admin policy permits this insert through a properly authenticated admin SQL/session. Do not upload private releases into the public GitHub Pages docs folder. Public assets are not gated.
 
-An active entitlement is required for the API to list downloads and reveal build links. Private Supabase Storage links expire after 60 seconds; links already generated remain valid until they expire. GitHub-hosted release URLs are public once revealed, so use private Supabase Storage for files that must remain confidential.
+The global download switch is OFF by default. While OFF, only explicitly approved testers can access downloads. When ON, active Premium/Enterprise members and approved testers can access downloads. The switch and tester list are enforced by the backend and Supabase RLS policies, including direct private-storage requests. Private Supabase Storage links expire after 60 seconds; links already generated remain valid until they expire. GitHub-hosted release URLs are public once revealed, so use private Supabase Storage for files that must remain confidential.
 
 ## Signup terms acceptance
 
