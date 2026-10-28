@@ -345,6 +345,111 @@ app.patch("/api/admin/users/:id/tester", requireUser, requireAdmin, async (req, 
   }
 });
 
+// Private member groups are separate from public download catalogue groups.
+app.get("/api/admin/member-groups", requireUser, requireAdmin, async (_req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Member group management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  try {
+    const { data: groups, error: groupError } = await adminAuthClient.from("jpn_member_groups")
+      .select("id,name,description,created_at").order("name", { ascending: true });
+    if (groupError) throw groupError;
+    const ids = (groups || []).map(group => group.id);
+    const { data: members, error: memberError } = ids.length
+      ? await adminAuthClient.from("jpn_member_group_members").select("group_id,user_id").in("group_id", ids)
+      : { data: [], error: null };
+    if (memberError) throw memberError;
+    const grouped = new Map((groups || []).map(group => [group.id, { ...group, member_ids: [] }]));
+    for (const row of members || []) grouped.get(row.group_id)?.member_ids.push(row.user_id);
+    res.json({ groups: [...grouped.values()] });
+  } catch (error) {
+    console.error("Member groups read failed:", error.message);
+    res.status(500).json({ error: "Could not load member groups. Apply migration 009_member_groups.sql." });
+  }
+});
+
+app.post("/api/admin/member-groups", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Member group management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  const name = String(req.body?.name || "").trim();
+  const description = String(req.body?.description || "").trim();
+  if (name.length < 1 || name.length > 80) return res.status(400).json({ error: "Group name must be between 1 and 80 characters." });
+  if (description.length > 500) return res.status(400).json({ error: "Group description must be 500 characters or fewer." });
+  try {
+    const { data, error } = await adminAuthClient.from("jpn_member_groups").insert({ name, description }).select("id,name,description,created_at").single();
+    if (error) throw error;
+    res.status(201).json({ group: { ...data, member_ids: [] }, message: "Member group created." });
+  } catch (error) {
+    console.error("Member group create failed:", error.message);
+    if (error.code === "23505") return res.status(409).json({ error: "A member group with that name already exists." });
+    res.status(500).json({ error: "Could not create the member group." });
+  }
+});
+
+app.patch("/api/admin/member-groups/:id", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Member group management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  const groupId = String(req.params.id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupId)) return res.status(400).json({ error: "A valid group ID is required." });
+  const patch = {};
+  if (typeof req.body?.name === "string") {
+    patch.name = req.body.name.trim();
+    if (patch.name.length < 1 || patch.name.length > 80) return res.status(400).json({ error: "Group name must be between 1 and 80 characters." });
+  }
+  if (typeof req.body?.description === "string") {
+    patch.description = req.body.description.trim();
+    if (patch.description.length > 500) return res.status(400).json({ error: "Group description must be 500 characters or fewer." });
+  }
+  if (!Object.keys(patch).length) return res.status(400).json({ error: "No group changes were provided." });
+  patch.updated_at = new Date().toISOString();
+  try {
+    const { data, error } = await adminAuthClient.from("jpn_member_groups").update(patch).eq("id", groupId).select("id,name,description,created_at").maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Member group not found." });
+    res.json({ group: data, message: "Member group updated." });
+  } catch (error) {
+    console.error("Member group update failed:", error.message);
+    if (error.code === "23505") return res.status(409).json({ error: "A member group with that name already exists." });
+    res.status(500).json({ error: "Could not update this member group." });
+  }
+});
+
+app.delete("/api/admin/member-groups/:id", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Member group management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  const groupId = String(req.params.id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupId)) return res.status(400).json({ error: "A valid group ID is required." });
+  const { error } = await adminAuthClient.from("jpn_member_groups").delete().eq("id", groupId);
+  if (error) { console.error("Member group delete failed:", error.message); return res.status(500).json({ error: "Could not delete this member group." }); }
+  res.json({ message: "Member group deleted." });
+});
+
+app.put("/api/admin/users/:id/member-groups", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Member group management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  const userId = String(req.params.id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) return res.status(400).json({ error: "A valid account ID is required." });
+  const groupIds = req.body?.group_ids;
+  if (!Array.isArray(groupIds) || groupIds.length > 100 || groupIds.some(id => typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))) {
+    return res.status(400).json({ error: "Choose valid member groups." });
+  }
+  try {
+    const { data: account, error: accountError } = await adminAuthClient.auth.admin.getUserById(userId);
+    if (accountError || !account?.user) return res.status(404).json({ error: "Account not found." });
+    const uniqueIds = [...new Set(groupIds)];
+    if (uniqueIds.length) {
+      const { data: groups, error: groupError } = await adminAuthClient.from("jpn_member_groups").select("id").in("id", uniqueIds);
+      if (groupError) throw groupError;
+      if ((groups || []).length !== uniqueIds.length) return res.status(400).json({ error: "One or more selected groups no longer exist. Refresh and try again." });
+    }
+    const { error: deleteError } = await adminAuthClient.from("jpn_member_group_members").delete().eq("user_id", userId);
+    if (deleteError) throw deleteError;
+    if (uniqueIds.length) {
+      const rows = uniqueIds.map(group_id => ({ group_id, user_id: userId, added_by: req.user.id }));
+      const { error: insertError } = await adminAuthClient.from("jpn_member_group_members").insert(rows);
+      if (insertError) throw insertError;
+    }
+    res.json({ user_id: userId, group_ids: uniqueIds, message: "Member group assignments saved." });
+  } catch (error) {
+    console.error("Member group assignment failed:", error.message);
+    res.status(500).json({ error: "Could not save member group assignments." });
+  }
+});
+
 app.get("/api/admin/download-groups", requireUser, requireAdmin, async (req, res) => {
   const { data, error } = await req.userSupabase.from("jpn_download_groups").select("id,name,description,sort_order,published").order("sort_order", { ascending: true });
   if (error) { console.error("Admin groups read failed:", error.message); return res.status(500).json({ error: "Could not load download groups right now." }); }
@@ -515,17 +620,24 @@ app.get("/api/admin/users", requireUser, requireAdmin, async (req, res) => {
     return res.status(500).json({ error: error.message.includes("Admin access required") ? "Administrator access could not be verified." : "Could not search accounts right now." });
   }
   try {
-    if (!adminAuthClient) return res.json({ users: (data || []).map(user => ({ ...user, tester: false })) });
+    if (!adminAuthClient) return res.json({ users: (data || []).map(user => ({ ...user, tester: false, group_ids: [] })) });
     const ids = (data || []).map(user => user.user_id);
-    const { data: testers, error: testerError } = ids.length
-      ? await adminAuthClient.from("jpn_download_testers").select("user_id").in("user_id", ids)
-      : { data: [], error: null };
-    if (testerError) throw testerError;
-    const testerIds = new Set((testers || []).map(row => row.user_id));
-    res.json({ users: (data || []).map(user => ({ ...user, tester: testerIds.has(user.user_id) })) });
+    const [testerResult, membershipResult] = await Promise.all([
+      ids.length ? adminAuthClient.from("jpn_download_testers").select("user_id").in("user_id", ids) : Promise.resolve({ data: [], error: null }),
+      ids.length ? adminAuthClient.from("jpn_member_group_members").select("user_id,group_id").in("user_id", ids) : Promise.resolve({ data: [], error: null })
+    ]);
+    if (testerResult.error) throw testerResult.error;
+    if (membershipResult.error) throw membershipResult.error;
+    const testerIds = new Set((testerResult.data || []).map(row => row.user_id));
+    const memberships = new Map();
+    for (const row of membershipResult.data || []) {
+      if (!memberships.has(row.user_id)) memberships.set(row.user_id, []);
+      memberships.get(row.user_id).push(row.group_id);
+    }
+    res.json({ users: (data || []).map(user => ({ ...user, tester: testerIds.has(user.user_id), group_ids: memberships.get(user.user_id) || [] })) });
   } catch (e) {
-    console.error("Tester status lookup failed:", e.message);
-    res.status(500).json({ error: "Could not load tester status." });
+    console.error("Member metadata lookup failed:", e.message);
+    res.status(500).json({ error: "Could not load tester and member group status. Apply migration 009_member_groups.sql." });
   }
 });
 
