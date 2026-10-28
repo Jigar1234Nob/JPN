@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080d1b">
-  <meta name="description" content="Compare JPN Basic, Premium and Enterprise monthly plans.">
+  <meta name="description" content="Compare JPN Premium and Enterprise app plans.">
   <title>Plans | JPN</title>
   <link rel="icon" type="image/svg+xml" href="/JPN/favicon.svg">
 
@@ -146,7 +146,7 @@
 
     .plans {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 20px;
       align-items: stretch;
       padding: 25px 0 65px;
@@ -180,6 +180,7 @@
     }
 
     .plan h2 { font-size: 1.6rem; margin: 0 0 10px; }
+    .deal-label { display:inline-flex; align-self:flex-start; margin-bottom:12px; padding:5px 10px; border-radius:999px; background:linear-gradient(100deg,var(--cyan),#b6f5ff); color:#06101b; font-size:.74rem; font-weight:800; letter-spacing:.06em; }
     .description { color: var(--muted); min-height: 48px; margin: 0; }
 
     .price {
@@ -328,36 +329,20 @@
 
     <section class="container" aria-label="Subscription plans">
       <div class="plans">
-        <article class="plan">
-          <h2>Basic</h2>
-          <p class="description">Straightforward web proxy access.</p>
-
-          <div class="price">$1.00 <small>/ month</small></div>
-          <div class="billing">Request only · manual review and payment<br>Updated release: Wednesday–Friday, 28–30 October 2026 · gradual rollout</div>
-          <hr class="rule">
-
-          <ul class="features">
-            <li><span class="yes">✓</span><span>Web proxy access</span></li>
-            <li><span class="no">—</span><span class="no">JPN VPN app</span></li>
-            <li><span class="no">—</span><span class="no">Quick Flash tool</span></li>
-          </ul>
-
-          <a class="button primary" href="/JPN/login/?mode=signup&amp;plan=basic" id="basic-preorder-button">Request Basic plan</a>
-        </article>
-
         <article class="plan featured">
-          <span class="popular">POPULAR</span>
+          <span class="popular">SPECIAL DEAL</span>
           <h2>Premium</h2>
-          <p class="description">Web proxy access plus the upcoming VPN app.</p>
+          <p class="description">JPN app access for individual users.</p>
 
-          <div class="price">$3.00 <small>/ month</small></div>
+          <div class="price">$3.50 <small>/ month</small></div>
+          <div class="deal-label">Premium app deal</div>
           <div class="billing">Request only · manual review and payment</div>
           <hr class="rule">
 
           <ul class="features">
-            <li><span class="yes">✓</span><span>Web proxy access</span></li>
-            <li><span class="soon">◷</span><span>JPN VPN app <strong class="soon">· Coming soon</strong></span></li>
-            <li><span class="no">—</span><span class="no">Quick Flash tool</span></li>
+            <li><span class="soon">◷</span><span>JPN app <strong class="soon">· Coming soon</strong></span></li>
+            <li><span class="yes">✓</span><span>Premium member downloads</span></li>
+            <li><span class="yes">✓</span><span>Account and membership dashboard</span></li>
           </ul>
 
           <a class="button primary" href="/JPN/login/?mode=signup&amp;plan=premium">Request Premium plan</a>
@@ -365,16 +350,16 @@
 
         <article class="plan">
           <h2>Enterprise</h2>
-          <p class="description">The complete planned JPN package for teams and organizations.</p>
+          <p class="description">JPN app access tailored for teams and organizations.</p>
 
           <div class="price">Custom</div>
           <div class="billing">Manual inquiry · custom pricing and payment</div>
           <hr class="rule">
 
           <ul class="features">
-            <li><span class="yes">✓</span><span>Web proxy access</span></li>
-            <li><span class="soon">◷</span><span>JPN VPN app <strong class="soon">· Coming soon</strong></span></li>
-            <li><span class="soon">◷</span><span>Quick Flash tool for different OSes <strong class="soon">· Coming soon</strong></span></li>
+            <li><span class="soon">◷</span><span>JPN app <strong class="soon">· Coming soon</strong></span></li>
+            <li><span class="yes">✓</span><span>Organization-focused access</span></li>
+            <li><span class="yes">✓</span><span>Custom onboarding and support</span></li>
           </ul>
 
           <button class="button" type="button" id="open-enterprise">Inquire about Enterprise</button>
@@ -408,7 +393,7 @@
       </div>
       <aside class="note">
         <strong>Manual plan requests:</strong>
-        Basic is planned at $1.00/month and Premium at $3.00/month. Selecting a plan takes you to account creation or sign-in, then to the Plans dashboard where you submit the request. Requests are reviewed manually. No online checkout, automatic payment, or automatic membership activation is enabled. Payment is arranged directly with JPN after review. The JPN VPN app and Quick Flash tool are still in development.
+        Premium is offered at $3.50/month as a special deal. Selecting a plan takes you to account creation or sign-in, then to the Plans dashboard where you submit the request. Requests are reviewed manually. No online checkout, automatic payment, or automatic membership activation is enabled. Payment is arranged directly with JPN after review. The JPN app is still in development.
       </aside>
     </section>
   </main>
@@ -417,13 +402,6 @@
 
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
-    const preorderButton = document.getElementById("basic-preorder-button");
-    function updatePreorderButton() {
-      if (!preorderButton) return;
-      preorderButton.href = "/JPN/login/?mode=signup&plan=basic";
-      preorderButton.textContent = "Request Basic plan";
-    }
-    updatePreorderButton();
   </script>
   <script type="module">
     import { JPN_API_BASE, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "../supabase-config.js";
