@@ -26,6 +26,8 @@ alter table public.jpn_member_groups enable row level security;
 alter table public.jpn_member_group_members enable row level security;
 revoke all on public.jpn_member_groups from anon, authenticated;
 revoke all on public.jpn_member_group_members from anon, authenticated;
+grant all on public.jpn_member_groups to service_role;
+grant all on public.jpn_member_group_members to service_role;
 
 comment on table public.jpn_member_groups is
   'Private administrator-managed groups used to organise JPN member accounts.';
