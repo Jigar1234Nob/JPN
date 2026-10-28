@@ -89,7 +89,7 @@ app.post("/api/auth/password-reset", authEmailLimiter, async (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => res.json({
-  ok: true, service: "jpn-api", version: "1.4.0", features: ["admin-invitations", "tier-management", "account-suspension", "resource-groups", "member-groups", "enterprise-inquiries"], timestamp: new Date().toISOString()
+  ok: true, service: "jpn-api", version: "1.5.0", features: ["admin-invitations", "tier-management", "account-suspension", "resource-groups", "member-groups", "resource-group-member-access", "enterprise-inquiries"], timestamp: new Date().toISOString()
 }));
 
 async function requireUser(req, res, next) {
