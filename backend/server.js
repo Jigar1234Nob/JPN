@@ -147,8 +147,8 @@ function requireAdmin(req, res, next) {
 
 app.get("/api/me", requireUser, async (req, res) => {
   let entitlement = { paid: false, expires_at: null };
-  try { entitlement = await getEntitlement(req); }
-  catch (error) { console.error("Entitlement read failed:", error.message); }
+  try { entitlement = await getEntitlement(req); entitlement.downloads_allowed = await canAccessDownloads(req, entitlement); }
+  catch (error) { console.error("Entitlement read failed:", error.message); entitlement.downloads_allowed = false; }
   res.json({ user: {
     id: req.user.id, email: req.user.email || null,
     created_at: req.user.created_at || null,
@@ -185,7 +185,7 @@ app.patch("/api/profile", requireUser, async (req, res) => {
 });
 
 app.get("/api/entitlement", requireUser, async (req, res) => {
-  try { res.json({ entitlement: await getEntitlement(req), role: req.isAdmin ? "admin" : "member" }); }
+  try { const entitlement = await getEntitlement(req); entitlement.downloads_allowed = await canAccessDownloads(req, entitlement); res.json({ entitlement, role: req.isAdmin ? "admin" : "member" }); }
   catch (error) {
     console.error("Entitlement read failed:", error.message);
     res.status(500).json({ error: "Could not verify membership right now." });
