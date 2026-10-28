@@ -423,7 +423,7 @@ app.get("/api/admin/plan-requests", requireUser, requireAdmin, async (_req, res)
         const metadata = user.user_metadata || {};
         const plan = String(metadata.jpn_plan_request || "").toLowerCase();
         const status = String(metadata.jpn_plan_request_status || "pending").toLowerCase();
-        if (["basic", "premium", "enterprise"].includes(plan)) {
+        if (["premium", "enterprise"].includes(plan)) {
           requests.push({
             user_id: user.id,
             email: user.email || null,
