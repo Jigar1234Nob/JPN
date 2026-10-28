@@ -80,7 +80,7 @@ function renderPlanRequest(){
  const metadata=currentUser?.user_metadata||{};
  const requested=String(metadata.jpn_plan_request||"").toLowerCase();
  const requestStatus=String(metadata.jpn_plan_request_status||"").toLowerCase();
- const active=["PAID ACTIVE","ADMIN ACCESS","BASIC ACTIVE","PREMIUM ACTIVE","ENTERPRISE ACTIVE"].includes($("#membership-tag")?.textContent);
+ const active=["PAID ACTIVE","ADMIN ACCESS","PREMIUM ACTIVE","ENTERPRISE ACTIVE"].includes($("#membership-tag")?.textContent);
  const expired=!!currentEntitlement?.expires_at&&new Date(currentEntitlement.expires_at).getTime()<=Date.now()&&currentEntitlement.plan!=="free";
  for(const plan of ["premium"]){
   const button=$("#request-"+plan); if(!button)continue;
