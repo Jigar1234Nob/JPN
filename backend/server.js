@@ -120,7 +120,7 @@ async function getEntitlement(req) {
     .select("paid,plan,expires_at,updated_at").eq("user_id", req.user.id).maybeSingle();
   if (error) throw error;
   const active = !!data?.paid && (!data.expires_at || new Date(data.expires_at).getTime() > Date.now());
-  return { paid: active, plan: data?.plan || (data?.paid ? "basic" : "free"), expires_at: data?.expires_at || null, updated_at: data?.updated_at || null, admin_override: false };
+  return { paid: active, plan: data?.plan || (data?.paid ? "premium" : "free"), expires_at: data?.expires_at || null, updated_at: data?.updated_at || null, admin_override: false };
 }
 
 function requireAdmin(req, res, next) {
