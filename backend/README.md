@@ -14,7 +14,7 @@ Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level s
 - POST /api/downloads/:id/url - creates a private signed download link lasting 60 seconds
 - POST /api/admin/users/invite - admin-only account invitation by email
 - GET /api/admin/users?email=... - admin-only member search
-- PATCH /api/admin/users/:id/plan - admin-only assign Free, Basic, Premium, or Enterprise access with optional expiry
+- PATCH /api/admin/users/:id/plan - admin-only assign No access, Premium, or Enterprise access with optional expiry
 - PATCH /api/admin/users/:id/disabled - admin-only suspend or re-enable an account
 - GET/POST/PATCH/DELETE /api/admin/download-groups - manage resource groups
 - GET/POST/PATCH/DELETE /api/admin/downloads - manage published builds and GitHub URLs
@@ -33,7 +33,7 @@ In Supabase Dashboard > SQL Editor, run these scripts in order:
 3. backend/sql/003_plan_requests.sql
 4. backend/sql/004_tiers_resources_and_account_controls.sql
 
-The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds pending Basic request details to admin search. The fourth script adds Basic/Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply all migrations in order before using the expanded admin console.
+The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds plan-request details to admin search. The fourth script adds Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply all migrations in order before using the expanded admin console.
 
 ## 2. Create your administrator account
 
@@ -96,4 +96,4 @@ There is no checkout, payment processor, or automatic billing. The admin opens /
 
 This starter enforces user sessions for profile APIs, server-verified admin role checks, manual paid entitlements, and private download access. GitHub Pages still serves the public HTML/CSS/JS pages to anyone who knows their URLs, but sensitive account data, admin actions, and download links are protected by the backend/database. Never place private files in docs/ or rely on hidden navigation for access control.
 
-The web proxy itself is intentionally not implemented yet, as requested. Before exposing it, build dedicated proxy fetch restrictions and prevent SSRF (block loopback, private, link-local, metadata-service, and non-HTTP(S) destinations), enforce quotas, and add abuse monitoring.
+JPN is focused on its application and member download library. No web proxy service is part of the product scope.
