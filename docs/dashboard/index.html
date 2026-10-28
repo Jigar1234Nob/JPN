@@ -48,7 +48,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, JPN_API_BASE } from "../supabas
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=s=>document.querySelector(s), notice=$("#notice");
 let currentUser=null, currentEntitlement=null;
-function canAccessDownloads(){const plan=String(currentEntitlement?.plan||"").toLowerCase();return !!currentEntitlement?.admin_override||!!currentEntitlement?.paid&&["premium","enterprise"].includes(plan)}
+function canAccessDownloads(){const plan=String(currentEntitlement?.plan||"").toLowerCase();return currentEntitlement?.downloads_allowed===true||!!currentEntitlement?.admin_override&&currentEntitlement?.downloads_allowed!==false||!!currentEntitlement?.paid&&["premium","enterprise"].includes(plan)&&currentEntitlement?.downloads_allowed!==false}
 function syncDownloadAccess(){const allowed=canAccessDownloads();const nav=document.querySelector('[data-view="downloads"]');const overviewButton=$("#overview-download-button");const howToButton=$("#overview-how-to-button");if(nav){nav.classList.toggle("locked",!allowed);nav.querySelector(".nav-text").textContent=allowed?"Downloads":"Downloads 🔒";nav.setAttribute("aria-label",allowed?"Downloads":"Downloads locked. Premium or Enterprise required");nav.title=allowed?"Open JPN downloads":"Premium or Enterprise membership required";}for(const button of [overviewButton,howToButton]){if(button){button.disabled=!allowed;button.classList.toggle("locked",!allowed);button.textContent=allowed?(button===howToButton?"How to get JPN":"Open Downloads"):"🔒 Premium required";button.title=allowed?"Open JPN setup and downloads":"An active Premium or Enterprise membership is required";}}}
 async function apiRequest(path,options={}) {
   if(!JPN_API_BASE)return null;
