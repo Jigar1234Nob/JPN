@@ -123,6 +123,23 @@ async function getEntitlement(req) {
   return { paid: active, plan: data?.plan || (data?.paid ? "premium" : "free"), expires_at: data?.expires_at || null, updated_at: data?.updated_at || null, admin_override: false };
 }
 
+
+async function getDownloadGate(userId) {
+  if (!adminAuthClient) throw new Error("Download access controls are not configured.");
+  const [settingResult, testerResult] = await Promise.all([
+    adminAuthClient.from("jpn_download_access_settings").select("enabled").eq("id", 1).maybeSingle(),
+    adminAuthClient.from("jpn_download_testers").select("user_id").eq("user_id", userId).maybeSingle()
+  ]);
+  if (settingResult.error || testerResult.error) throw settingResult.error || testerResult.error;
+  return { enabled: settingResult.data?.enabled === true, tester: !!testerResult.data };
+}
+async function canAccessDownloads(req, entitlement) {
+  const gate = await getDownloadGate(req.user.id);
+  if (gate.tester) return true;
+  if (!gate.enabled) return false;
+  return !!entitlement.admin_override || (!!entitlement.paid && ["premium", "enterprise"].includes(String(entitlement.plan || "").toLowerCase()));
+}
+
 function requireAdmin(req, res, next) {
   if (!req.isAdmin) return res.status(403).json({ error: "JPN administrator access is required." });
   next();
@@ -178,7 +195,7 @@ app.get("/api/entitlement", requireUser, async (req, res) => {
 app.get("/api/downloads", requireUser, async (req, res) => {
   try {
     const entitlement = await getEntitlement(req);
-    if (!entitlement.admin_override && (!entitlement.paid || !["premium", "enterprise"].includes(String(entitlement.plan || "").toLowerCase()))) return res.status(403).json({ error: "Downloads require an active Premium or Enterprise membership.", code: "PREMIUM_MEMBERSHIP_REQUIRED" });
+    if (!(await canAccessDownloads(req, entitlement))) return res.status(403).json({ error: "JPN downloads are disabled globally or your account is not authorised. Access is controlled by the JPN administrator.", code: "DOWNLOADS_DISABLED_OR_UNAUTHORISED" });
     const { data, error } = await req.userSupabase.from("jpn_downloads")
       .select("id,title,description,version,group_id,github_url,created_at").eq("published", true).order("created_at", { ascending: false });
     if (error) throw error;
@@ -198,7 +215,7 @@ app.get("/api/downloads", requireUser, async (req, res) => {
 app.post("/api/downloads/:id/url", requireUser, async (req, res) => {
   try {
     const entitlement = await getEntitlement(req);
-    if (!entitlement.admin_override && (!entitlement.paid || !["premium", "enterprise"].includes(String(entitlement.plan || "").toLowerCase()))) return res.status(403).json({ error: "Downloads require an active Premium or Enterprise membership.", code: "PREMIUM_MEMBERSHIP_REQUIRED" });
+    if (!(await canAccessDownloads(req, entitlement))) return res.status(403).json({ error: "JPN downloads are disabled globally or your account is not authorised. Access is controlled by the JPN administrator.", code: "DOWNLOADS_DISABLED_OR_UNAUTHORISED" });
     const { data: item, error } = await req.userSupabase.from("jpn_downloads")
       .select("id,title,bucket,object_path,github_url,published").eq("id", req.params.id).eq("published", true).maybeSingle();
     if (error) throw error;
@@ -279,6 +296,52 @@ app.patch("/api/admin/users/:id/disabled", requireUser, requireAdmin, async (req
   } catch (error) {
     console.error("Admin account suspension failed:", error.message);
     res.status(500).json({ error: "Could not change account status. Check the backend account-control configuration." });
+  }
+});
+
+
+app.get("/api/admin/download-access", requireUser, requireAdmin, async (_req, res) => {
+  try {
+    if (!adminAuthClient) return res.status(503).json({ error: "Add SUPABASE_SERVICE_ROLE_KEY to configure download access controls." });
+    const { data, error } = await adminAuthClient.from("jpn_download_access_settings").select("enabled,updated_at").eq("id", 1).maybeSingle();
+    if (error) throw error;
+    res.json({ enabled: data?.enabled === true, updated_at: data?.updated_at || null });
+  } catch (error) {
+    console.error("Download gate read failed:", error.message);
+    res.status(500).json({ error: "Could not load the download setting. Apply database migration 008." });
+  }
+});
+app.patch("/api/admin/download-access", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Add SUPABASE_SERVICE_ROLE_KEY to configure download access controls." });
+  if (typeof req.body?.enabled !== "boolean") return res.status(400).json({ error: "enabled must be true or false." });
+  try {
+    const { data, error } = await adminAuthClient.from("jpn_download_access_settings").upsert({ id: 1, enabled: req.body.enabled, updated_at: new Date().toISOString(), updated_by: req.user.id }, { onConflict: "id" }).select("enabled,updated_at").single();
+    if (error) throw error;
+    res.json({ enabled: data.enabled, updated_at: data.updated_at, message: data.enabled ? "Downloads enabled for active Premium/Enterprise members and approved testers." : "Downloads disabled globally. Only approved testers can access them." });
+  } catch (error) {
+    console.error("Download gate update failed:", error.message);
+    res.status(500).json({ error: "Could not save the download setting. Apply database migration 008." });
+  }
+});
+app.patch("/api/admin/users/:id/tester", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Add SUPABASE_SERVICE_ROLE_KEY to configure tester access." });
+  const userId = String(req.params.id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) return res.status(400).json({ error: "A valid account ID is required." });
+  if (typeof req.body?.tester !== "boolean") return res.status(400).json({ error: "tester must be true or false." });
+  try {
+    const { data: account, error: accountError } = await adminAuthClient.auth.admin.getUserById(userId);
+    if (accountError || !account?.user) return res.status(404).json({ error: "Account not found." });
+    if (req.body.tester) {
+      const { error } = await adminAuthClient.from("jpn_download_testers").upsert({ user_id: userId, added_by: req.user.id }, { onConflict: "user_id" });
+      if (error) throw error;
+    } else {
+      const { error } = await adminAuthClient.from("jpn_download_testers").delete().eq("user_id", userId);
+      if (error) throw error;
+    }
+    res.json({ tester: req.body.tester, message: req.body.tester ? "Tester access enabled, including while global downloads are disabled." : "Tester access removed." });
+  } catch (error) {
+    console.error("Tester access update failed:", error.message);
+    res.status(500).json({ error: "Could not update tester access. Apply database migration 008." });
   }
 });
 
@@ -451,7 +514,19 @@ app.get("/api/admin/users", requireUser, requireAdmin, async (req, res) => {
     console.error("Admin user search failed:", error.message);
     return res.status(500).json({ error: error.message.includes("Admin access required") ? "Administrator access could not be verified." : "Could not search accounts right now." });
   }
-  res.json({ users: data || [] });
+  try {
+    if (!adminAuthClient) return res.json({ users: (data || []).map(user => ({ ...user, tester: false })) });
+    const ids = (data || []).map(user => user.user_id);
+    const { data: testers, error: testerError } = ids.length
+      ? await adminAuthClient.from("jpn_download_testers").select("user_id").in("user_id", ids)
+      : { data: [], error: null };
+    if (testerError) throw testerError;
+    const testerIds = new Set((testers || []).map(row => row.user_id));
+    res.json({ users: (data || []).map(user => ({ ...user, tester: testerIds.has(user.user_id) })) });
+  } catch (e) {
+    console.error("Tester status lookup failed:", e.message);
+    res.status(500).json({ error: "Could not load tester status." });
+  }
 });
 
 app.patch("/api/admin/users/:id/entitlement", requireUser, requireAdmin, async (req, res) => {
