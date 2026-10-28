@@ -69,3 +69,36 @@ using (
 );
 
 -- The default is deliberately OFF. An administrator must explicitly enable general access.
+
+-- Remove the old broad admin storage policy because permissive FOR ALL policies
+-- would otherwise allow administrators to read private objects while the switch is OFF.
+drop policy if exists "Admins can manage JPN private files" on storage.objects;
+drop policy if exists "Admins can insert JPN private files" on storage.objects;
+create policy "Admins can insert JPN private files"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'jpn-private-downloads'
+  and (auth.jwt()->'app_metadata'->>'role') = 'admin'
+  and public.jpn_current_account_enabled()
+);
+drop policy if exists "Admins can update JPN private files" on storage.objects;
+create policy "Admins can update JPN private files"
+on storage.objects for update to authenticated
+using (
+  bucket_id = 'jpn-private-downloads'
+  and (auth.jwt()->'app_metadata'->>'role') = 'admin'
+  and public.jpn_current_account_enabled()
+)
+with check (
+  bucket_id = 'jpn-private-downloads'
+  and (auth.jwt()->'app_metadata'->>'role') = 'admin'
+  and public.jpn_current_account_enabled()
+);
+drop policy if exists "Admins can delete JPN private files" on storage.objects;
+create policy "Admins can delete JPN private files"
+on storage.objects for delete to authenticated
+using (
+  bucket_id = 'jpn-private-downloads'
+  and (auth.jwt()->'app_metadata'->>'role') = 'admin'
+  and public.jpn_current_account_enabled()
+);
