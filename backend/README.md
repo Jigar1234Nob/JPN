@@ -33,7 +33,7 @@ In Supabase Dashboard > SQL Editor, run these scripts in order:
 3. backend/sql/003_plan_requests.sql
 4. backend/sql/004_tiers_resources_and_account_controls.sql
 
-The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds plan-request details to admin search. The fourth script adds Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply all migrations in order before using the expanded admin console.
+The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds plan-request details to admin search. The fourth script adds Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply migrations 001 through 007 in order before using the expanded admin console. Migration 007 removes Basic from new plan assignments while preserving existing legacy Basic entitlements.
 
 ## 2. Create your administrator account
 
