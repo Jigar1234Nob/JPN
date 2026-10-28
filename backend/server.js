@@ -244,7 +244,7 @@ app.patch("/api/admin/users/:id/plan", requireUser, requireAdmin, async (req, re
   const userId = String(req.params.id || "");
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) return res.status(400).json({ error: "A valid account ID is required." });
   const plan = String(req.body?.plan || "").toLowerCase();
-  if (!["free", "basic", "premium", "enterprise"].includes(plan)) return res.status(400).json({ error: "Choose Free, Basic, Premium, or Enterprise." });
+  if (!["free", "premium", "enterprise"].includes(plan)) return res.status(400).json({ error: "Choose No access, Premium, or Enterprise." });
   let expiresAt = null;
   if (req.body.expires_at) {
     const date = new Date(req.body.expires_at);
