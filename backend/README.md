@@ -86,7 +86,7 @@ An active entitlement is required for the API to list downloads and reveal build
 
 ## Signup terms acceptance
 
-The signup page requires acceptance of `/JPN/terms/` and stores the terms version and timestamp in Supabase signup metadata. The disclosure explains that authorized operators with log access may be able to see IP addresses and that VPN/proxy services have their own provider terms. Metadata records the acknowledgement but is not a substitute for backend legal/compliance enforcement.
+The signup page requires acceptance of `/JPN/terms/` and stores the terms version and timestamp in Supabase signup metadata. The disclosure explains that authorized operators with log access may be able to see IP addresses and that third-party application providers have their own terms. Metadata records the acknowledgement but is not a substitute for backend legal/compliance enforcement.
 
 ## Manual paid access, not billing
 
