@@ -467,7 +467,7 @@ app.patch("/api/admin/users/:id/entitlement", requireUser, requireAdmin, async (
     expiresAt = expiresAt.toISOString();
   }
   const { data, error } = await req.userSupabase.rpc("jpn_admin_set_plan", {
-    target_user_id: userId, target_plan: req.body.paid ? "basic" : "free", entitlement_expires_at: expiresAt
+    target_user_id: userId, target_plan: req.body.paid ? "premium" : "free", entitlement_expires_at: expiresAt
   });
   if (error) {
     console.error("Admin entitlement update failed:", error.message);
