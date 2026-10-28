@@ -19,6 +19,7 @@ Node.js 20+ / Express API using Supabase Auth for identity, Postgres row-level s
 - PATCH /api/admin/users/:id/plan - admin-only assign No access, Premium, or Enterprise access with optional expiry
 - PATCH /api/admin/users/:id/disabled - admin-only suspend or re-enable an account
 - GET/POST/PATCH/DELETE /api/admin/download-groups - manage download catalogue groups
+- PUT /api/admin/download-groups/:id/member-groups - restrict a resource group to selected member groups
 - GET/POST/PATCH/DELETE /api/admin/member-groups - create, rename, list, and delete private member groups
 - PUT /api/admin/users/:id/member-groups - assign member groups to a specific account
 - GET/POST/PATCH/DELETE /api/admin/downloads - manage published builds and GitHub URLs
@@ -41,8 +42,9 @@ In Supabase Dashboard > SQL Editor, run these scripts in order:
 7. backend/sql/007_remove_basic_plan.sql
 8. backend/sql/008_download_kill_switch_and_testers.sql
 9. backend/sql/009_member_groups.sql
+10. backend/sql/010_resource_group_member_access.sql
 
-The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds plan-request details to admin search. The fourth script adds Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply migrations 001 through 009 in order before using the expanded admin console. Migration 009 creates private member groups and per-account group assignments; these labels organise accounts only and do not automatically grant membership or download access. Migration 007 removes the retired entry-level plan from new assignments while preserving existing legacy entitlements.
+The second script creates entitlements, private download metadata, the private storage bucket, row-level security policies, and guarded admin functions. The third script adds plan-request details to admin search. The fourth script adds Premium/Enterprise tiers, group-based download catalogue metadata, GitHub release URLs, account suspension state, and Enterprise inquiry storage. Plan requests are informational and never grant access by themselves; server-side entitlements control access. Apply migrations 001 through 009 in order before using the expanded admin console. Migration 009 creates private member groups and per-account group assignments. Migration 010 lets administrators assign one or more member groups to each resource group and enforces those restrictions in the API and database policies. A resource group with no assigned member groups remains available to all accounts that already pass the global download gate; when groups are assigned, a member must belong to at least one selected group. Migration 007 removes the retired entry-level plan from new assignments while preserving existing legacy entitlements.
 
 ## 2. Create your administrator account
 
