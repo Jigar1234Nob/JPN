@@ -48,8 +48,12 @@ const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.le
 app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = typeof req.body?.password === "string" ? req.body.password : "";
+  const first_name = String(req.body?.first_name || "").trim();
+  const last_name = String(req.body?.last_name || "").trim();
   const terms = req.body?.terms;
   if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email address." });
+  if (!first_name || first_name.length > 80) return res.status(400).json({ error: "Enter a first name of 1 to 80 characters." });
+  if (!last_name || last_name.length > 80) return res.status(400).json({ error: "Enter a last name of 1 to 80 characters." });
   if (password.length < 8 || password.length > 128) return res.status(400).json({ error: "Use a password between 8 and 128 characters." });
   if (!terms || terms.accepted !== true) return res.status(400).json({ error: "You must accept the Terms of Service before creating an account." });
   try {
@@ -58,6 +62,9 @@ app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
       options: {
         emailRedirectTo: "https://jigar1234nob.github.io/JPN/dashboard/?welcome=1",
         data: {
+          first_name,
+          last_name,
+          full_name: first_name + " " + last_name,
           jpn_terms_accepted_at: String(terms.acceptedAt || new Date().toISOString()),
           jpn_terms_version: "2026-10-22",
           jpn_terms_ip_vpn_acknowledged: true
@@ -802,15 +809,23 @@ app.get("/api/admin/plan-requests", requireUser, requireAdmin, async (_req, res)
 });
 
 app.get("/api/admin/users", requireUser, requireAdmin, async (req, res) => {
-  const email = String(req.query.email || "").trim();
-  if (email.length < 3 || email.length > 254) return res.status(400).json({ error: "Enter at least 3 characters of an email address." });
-  const { data, error } = await req.userSupabase.rpc("jpn_admin_search_users", { search_email: email });
+  const query = String(req.query.q ?? req.query.email ?? "").trim();
+  const limit = Number.parseInt(String(req.query.limit ?? "100"), 10);
+  const offset = Number.parseInt(String(req.query.offset ?? "0"), 10);
+  if (query.length > 254) return res.status(400).json({ error: "Search text must be 254 characters or fewer." });
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) return res.status(400).json({ error: "Page size must be between 1 and 100." });
+  if (!Number.isInteger(offset) || offset < 0 || offset > 1000000) return res.status(400).json({ error: "Invalid page offset." });
+  const { data, error } = await req.userSupabase.rpc("jpn_admin_search_users", {
+    search_query: query,
+    result_limit: limit,
+    result_offset: offset
+  });
   if (error) {
     console.error("Admin user search failed:", error.message);
     return res.status(500).json({ error: error.message.includes("Admin access required") ? "Administrator access could not be verified." : "Could not search accounts right now." });
   }
   try {
-    if (!adminAuthClient) return res.json({ users: (data || []).map(user => ({ ...user, tester: false, group_ids: [] })) });
+    if (!adminAuthClient) return res.json({ users: (data || []).map(user => ({ ...user, tester: false, group_ids: [] })), total: Number(data?.[0]?.total_count || 0), limit, offset });
     const ids = (data || []).map(user => user.user_id);
     const [testerResult, membershipResult] = await Promise.all([
       ids.length ? adminAuthClient.from("jpn_download_testers").select("user_id").in("user_id", ids) : Promise.resolve({ data: [], error: null }),
@@ -824,7 +839,7 @@ app.get("/api/admin/users", requireUser, requireAdmin, async (req, res) => {
       if (!memberships.has(row.user_id)) memberships.set(row.user_id, []);
       memberships.get(row.user_id).push(row.group_id);
     }
-    res.json({ users: (data || []).map(user => ({ ...user, tester: testerIds.has(user.user_id), group_ids: memberships.get(user.user_id) || [] })) });
+    res.json({ users: (data || []).map(user => ({ ...user, tester: testerIds.has(user.user_id), group_ids: memberships.get(user.user_id) || [] })), total: Number(data?.[0]?.total_count || 0), limit, offset });
   } catch (e) {
     console.error("Member metadata lookup failed:", e.message);
     res.status(500).json({ error: "Could not load tester and member group status. Apply migration 009_member_groups.sql." });
