@@ -148,10 +148,23 @@ async function getResourceGroupMemberGroupIds(groupId) {
   return (data || []).map(row => row.member_group_id);
 }
 
+async function getResourceGroupUserIds(groupId) {
+  if (!adminAuthClient) throw new Error("Resource group access controls require SUPABASE_SERVICE_ROLE_KEY.");
+  const { data, error } = await adminAuthClient.from("jpn_download_group_users")
+    .select("user_id").eq("download_group_id", groupId);
+  if (error) throw error;
+  return (data || []).map(row => row.user_id);
+}
+
 async function canAccessResourceGroup(userId, groupId, isAdmin = false) {
   if (!groupId || isAdmin) return true;
-  const requiredGroupIds = await getResourceGroupMemberGroupIds(groupId);
-  if (!requiredGroupIds.length) return true;
+  const [requiredGroupIds, requiredUserIds] = await Promise.all([
+    getResourceGroupMemberGroupIds(groupId),
+    getResourceGroupUserIds(groupId)
+  ]);
+  if (!requiredGroupIds.length && !requiredUserIds.length) return true;
+  if (requiredUserIds.includes(userId)) return true;
+  if (!requiredGroupIds.length) return false;
   const { data, error } = await adminAuthClient.from("jpn_member_group_members")
     .select("group_id").eq("user_id", userId);
   if (error) throw error;
@@ -541,7 +554,20 @@ app.get("/api/admin/download-groups", requireUser, requireAdmin, async (req, res
   if (error) { console.error("Admin groups read failed:", error.message); return res.status(500).json({ error: "Could not load download groups right now." }); }
   try {
     const groups = [];
-    for (const group of (data || [])) groups.push({ ...group, member_group_ids: await getResourceGroupMemberGroupIds(group.id) });
+    for (const group of (data || [])) {
+      const [member_group_ids, user_ids] = await Promise.all([
+        getResourceGroupMemberGroupIds(group.id),
+        getResourceGroupUserIds(group.id)
+      ]);
+      const user_assignments = [];
+      for (const user_id of user_ids) {
+        try {
+          const { data: result } = await adminAuthClient.auth.admin.getUserById(user_id);
+          user_assignments.push({ user_id, email: result?.user?.email || "(email unavailable)" });
+        } catch { user_assignments.push({ user_id, email: "(email unavailable)" }); }
+      }
+      groups.push({ ...group, member_group_ids, user_ids, user_assignments });
+    }
     res.json({ groups });
   } catch (groupError) {
     console.error("Resource group membership read failed:", groupError.message);
@@ -605,6 +631,38 @@ app.put("/api/admin/download-groups/:id/member-groups", requireUser, requireAdmi
   } catch (error) {
     console.error("Resource group assignment save failed:", error.message);
     res.status(500).json({ error: "Could not save resource group assignments. Confirm migration 010 has been applied." });
+  }
+});
+app.put("/api/admin/download-groups/:id/users", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Individual resource access requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  const groupId = String(req.params.id || "");
+  const userIds = req.body?.user_ids;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(groupId)) return res.status(400).json({ error: "A valid resource group ID is required." });
+  if (!Array.isArray(userIds) || userIds.length > 200 || userIds.some(id => typeof id !== "string" || !uuidPattern.test(id))) {
+    return res.status(400).json({ error: "Choose valid member accounts (up to 200 per resource group)." });
+  }
+  try {
+    const { data: group, error: groupError } = await adminAuthClient.from("jpn_download_groups").select("id").eq("id", groupId).maybeSingle();
+    if (groupError || !group) return res.status(404).json({ error: "Resource group not found." });
+    const uniqueIds = [...new Set(userIds)];
+    for (const userId of uniqueIds) {
+      const { data: account, error: accountError } = await adminAuthClient.auth.admin.getUserById(userId);
+      if (accountError || !account?.user) return res.status(400).json({ error: "One or more selected accounts no longer exist. Refresh and try again." });
+    }
+    const { error: deleteError } = await adminAuthClient.from("jpn_download_group_users").delete().eq("download_group_id", groupId);
+    if (deleteError) throw deleteError;
+    if (uniqueIds.length) {
+      const rows = uniqueIds.map(user_id => ({ download_group_id: groupId, user_id, assigned_by: req.user.id }));
+      const { error: insertError } = await adminAuthClient.from("jpn_download_group_users").insert(rows);
+      if (insertError) throw insertError;
+    }
+    res.json({ success: true, user_ids: uniqueIds, message: uniqueIds.length
+      ? "Individual access saved. These people can access this resource group, alongside members of any assigned member groups."
+      : "Individual assignments cleared. Access still follows any assigned member groups; if none are assigned, all accounts passing the global download gate can access this group." });
+  } catch (error) {
+    console.error("Individual resource access save failed:", error.message);
+    res.status(500).json({ error: "Could not save individual resource access. Confirm migration 012 has been applied." });
   }
 });
 app.delete("/api/admin/download-groups/:id", requireUser, requireAdmin, async (req, res) => {
