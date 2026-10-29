@@ -511,7 +511,7 @@ app.post("/api/admin/compatibility", requireUser, requireAdmin, async (req, res)
   const checked = validateCompatibilityEntry(req.body);
   if (checked.error) return res.status(400).json({ error: checked.error });
   const { data, error } = await req.userSupabase.from("jpn_compatibility_entries")
-    .insert({ ...checked.value, updated_by: req.user.id }).select("id,name,status,category,details,notes,link,created_at,updated_at").single();
+    .insert({ ...checked.value, created_by: req.user.id, updated_by: req.user.id }).select("id,name,status,category,details,notes,link,created_at,updated_at").single();
   if (error) { console.error("Compatibility entry create failed:", error.message); return res.status(500).json({ error: "Could not add the compatibility entry. Check that migration 011 has been applied." }); }
   res.status(201).json({ entry: data });
 });
