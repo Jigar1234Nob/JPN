@@ -572,12 +572,12 @@ app.get("/api/admin/download-groups", requireUser, requireAdmin, async (req, res
   } catch (groupError) {
     console.error("Resource group membership read failed:", groupError.message);
     const missingServiceKey = /SUPABASE_SERVICE_ROLE_KEY/.test(groupError.message || "");
-    const missingTable = /jpn_download_group_member_groups|does not exist|schema cache/i.test(groupError.message || "");
+    const missingTable = /jpn_download_group_member_groups|jpn_download_group_users|does not exist|schema cache/i.test(groupError.message || "");
     res.status(missingServiceKey ? 503 : 500).json({
       error: missingServiceKey
         ? "Resource group restrictions need SUPABASE_SERVICE_ROLE_KEY configured on Render."
         : missingTable
-          ? "Resource group access table is missing. Run backend/sql/010_resource_group_member_access.sql in the correct Supabase project."
+          ? "Resource group access tables are missing. Run migrations 010_resource_group_member_access.sql and 012_download_group_individual_users.sql in the correct Supabase project."
           : "Could not load resource group member assignments. Check the Render backend logs for the database error.",
       code: missingServiceKey ? "SERVICE_ROLE_KEY_MISSING" : missingTable ? "RESOURCE_GROUP_MIGRATION_MISSING" : "RESOURCE_GROUP_ASSIGNMENTS_READ_FAILED"
     });
