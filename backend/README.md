@@ -103,6 +103,10 @@ The signup page requires acceptance of `/JPN/terms/` and stores the terms versio
 
 There is no checkout, payment processor, or automatic billing. The admin opens /JPN/admin/ to invite accounts by email, searches for existing members, and clicks Mark as paid or Revoke paid access. An optional expiry date can be set. This writes an entitlement in the database; the browser cannot grant itself membership.
 
+## Support
+
+For setup assistance or account/download issues, email **[jigar@jigar.au](mailto:jigar@jigar.au)**. Never email passwords, access tokens, or the Supabase service-role key.
+
 ## Security scope and remaining work
 
 This starter enforces user sessions for profile APIs, server-verified admin role checks, manual paid entitlements, and private download access. GitHub Pages still serves the public HTML/CSS/JS pages to anyone who knows their URLs, but sensitive account data, admin actions, and download links are protected by the backend/database. Never place private files in docs/ or rely on hidden navigation for access control.
