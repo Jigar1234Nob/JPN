@@ -33,10 +33,10 @@
 <form id="invite-form" class="formrow"><input id="invite-email" type="email" autocomplete="email" placeholder="new-member@example.com" aria-label="Email address for new account" required><button class="primary" id="invite-button" type="submit">Send invitation</button></form>
 <div class="foot" id="invite-status" role="status" aria-live="polite" style="margin-top:12px"></div></div>
 <div class="panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Latest plan requests</h2><button id="refresh-plan-requests" type="button">Refresh requests</button></div><p class="muted">The newest Premium and Enterprise requests appear here automatically. Use Manage account to open the matching account in membership controls. Approval does not collect payment.</p><div id="plan-requests-list"><div class="empty">Loading latest plan requests…</div></div></div>
-<div class="panel"><h2>Find a member</h2><p class="muted">Search by part of their email address. At least three characters are required.</p>
-<form id="search-form" class="formrow"><input id="email-query" type="search" autocomplete="off" placeholder="member@example.com" aria-label="Email address to search" required><button class="primary" id="search-button" type="submit">Search accounts</button></form>
+<div class="panel"><h2>All users</h2><p class="muted">Browse every account or search by first name, last name, email address, or account ID. Leave the search box blank to list everyone.</p>
+<form id="search-form" class="formrow"><input id="email-query" type="search" autocomplete="off" placeholder="Name, email, or account ID" aria-label="Search users by name, email, or account ID"><button class="primary" id="search-button" type="submit">Search users</button></form>
 <div class="foot" style="margin-top:12px">Only authenticated users with the server-verified Supabase app_metadata role of admin can use this console.</div></div>
-<div class="panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Search results</h2><span id="count" class="muted"></span></div><div id="results" style="margin-top:12px"><div class="empty">Search for an account to manage membership.</div></div></div>
+<div class="panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">User directory</h2><span id="count" class="muted"></span></div><div id="results" style="margin-top:12px"><div class="empty">Loading users…</div></div><div style="margin-top:14px;text-align:center"><button id="load-more-users" type="button" hidden>Load more users</button></div></div>
 <div class="panel"><h2>Member groups</h2><p class="muted">Create private groups such as Campus Testers, Staff, or Early Access, then assign members from account search results. These groups organise accounts only; they do not automatically grant a membership plan or download permission.</p>
 <form id="member-group-form" class="formrow"><input id="member-group-name" placeholder="Group name (e.g. Campus Testers)" aria-label="Member group name" required maxlength="80"><input id="member-group-description" placeholder="What is this group for?" aria-label="Member group description" maxlength="500"><button class="primary" id="member-group-create" type="submit">Create member group</button></form>
 <div id="member-groups-list" style="margin-top:14px"><div class="empty">Loading member groups…</div></div></div>
@@ -57,6 +57,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, JPN_API_BASE } from "../supabas
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=s=>document.querySelector(s), status=$("#status"), consoleEl=$("#console"), results=$("#results");
 let downloadGateEnabled=false, memberGroups=[], resourceUserSelections={};
+let userSearchQuery="", userSearchTotal=0, loadedUsers=[];
 async function loadDownloadGate(){
  const badge=$("#download-gate-status"),button=$("#download-gate-toggle");
  try{
@@ -93,29 +94,48 @@ async function api(path,options={}){
  return payload;
 }
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function renderUsers(users){
- $("#count").textContent=users.length+" account"+(users.length===1?"":"s");
+function renderUsers(users,total=userSearchTotal){
+ $("#count").textContent="Showing "+users.length+" of "+total+" account"+(total===1?"":"s");
+ $("#load-more-users").hidden=users.length>=total;
  if(!users.length){results.innerHTML='<div class="empty">No matching accounts found.</div>';return}
  results.innerHTML=users.map(user=>{
   const id=escapeHtml(user.user_id), plan=user.plan|| (user.paid?"premium":"free"), disabled=!!user.disabled, tester=!!user.tester, expired=plan!=="free"&&!!user.expires_at&&new Date(user.expires_at).getTime()<=Date.now();
+  const fullName=[user.first_name,user.last_name].filter(Boolean).join(" ").trim();
+  const nameLine=fullName?'<div class="email">'+escapeHtml(fullName)+'</div>':'';
   const expires=user.expires_at?' <span class="meta">Until '+escapeHtml(new Date(user.expires_at).toLocaleString())+'</span>':'';
   const requestPending=["premium","enterprise"].includes(String(user.plan_request||"").toLowerCase())&&user.plan_request_status==="pending";
   const request=requestPending?'<div style="margin-top:8px"><span class="pill">'+escapeHtml(String(user.plan_request||"plan").toUpperCase())+' REQUEST PENDING</span><div class="meta">Requested: '+escapeHtml(user.plan_requested_at?new Date(user.plan_requested_at).toLocaleString():"date unavailable")+'</div></div>':'';
-   const selectedGroups=new Set(user.group_ids||[]);
-   const groupOptions=memberGroups.map(group=>'<option value="'+escapeHtml(group.id)+'" '+(selectedGroups.has(group.id)?"selected":"")+'>'+escapeHtml(group.name)+'</option>').join("");
-   return '<article class="user" data-user-id="'+id+'"><div><div class="email">'+escapeHtml(user.email||"(no email)")+'</div><div class="meta">Account ID: '+id+'</div><div class="meta">Created: '+escapeHtml(user.created_at?new Date(user.created_at).toLocaleDateString():"unknown")+'</div><div style="margin-top:8px"><span class="pill '+(disabled?"off":plan==="free"?"off":"")+'">'+(disabled?"ACCOUNT DISABLED":plan==="free"?"FREE PLAN":expired?escapeHtml(plan.toUpperCase())+" EXPIRED":user.paid?escapeHtml(plan.toUpperCase())+" ACTIVE":escapeHtml(plan.toUpperCase())+" INACTIVE")+'</span>'+expires+request+'</div></div><div class="user-actions" style="max-width:440px"><label class="meta" for="plan-'+id+'">Membership plan</label><select id="plan-'+id+'" data-plan-select="'+id+'" aria-label="Membership plan"><option value="free" '+(plan==="free"?"selected":"")+'>No access</option>'+(plan==="basic"?'<option value="basic" selected disabled>Legacy membership (existing)</option>':'')+'<option value="premium" '+(plan==="premium"?"selected":"")+'>Premium</option><option value="enterprise" '+(plan==="enterprise"?"selected":"")+'>Enterprise</option></select><label class="meta" for="expiry-'+id+'">Optional expiry</label><input type="date" id="expiry-'+id+'" aria-label="Optional membership expiry date"><button class="primary" data-set-plan="'+id+'">Save plan</button><label class="meta" for="member-groups-'+id+'">Member groups</label><select id="member-groups-'+id+'" data-member-groups="'+id+'" multiple size="'+Math.max(2,Math.min(5,memberGroups.length||2))+'" aria-label="Member groups for this account" '+(memberGroups.length?"":"disabled")+'>'+groupOptions+'</select><button data-save-member-groups="'+id+'" '+(memberGroups.length?"":"disabled")+'>Save group assignments</button><button class="'+(tester?"danger":"")+'" data-tester-user="'+id+'" data-tester="'+tester+'">'+(tester?"Remove tester access":"Allow as tester")+'</button><button class="'+(disabled?"primary":"danger")+'" data-disable-user="'+id+'" data-disabled="'+disabled+'">'+(disabled?"Enable account":"Disable account")+'</button></div></article>';
+  const selectedGroups=new Set(user.group_ids||[]);
+  const groupOptions=memberGroups.map(group=>'<option value="'+escapeHtml(group.id)+'" '+(selectedGroups.has(group.id)?"selected":"")+'>'+escapeHtml(group.name)+'</option>').join("");
+  return '<article class="user" data-user-id="'+id+'"><div>'+nameLine+'<div class="email">'+escapeHtml(user.email||"(no email)")+'</div><div class="meta">Account ID: '+id+'</div><div class="meta">Created: '+escapeHtml(user.created_at?new Date(user.created_at).toLocaleDateString():"unknown")+'</div><div style="margin-top:8px"><span class="pill '+(disabled?"off":plan==="free"?"off":"")+'">'+(disabled?"ACCOUNT DISABLED":plan==="free"?"FREE PLAN":expired?escapeHtml(plan.toUpperCase())+" EXPIRED":user.paid?escapeHtml(plan.toUpperCase())+" ACTIVE":escapeHtml(plan.toUpperCase())+" INACTIVE")+'</span>'+expires+request+'</div></div><div class="user-actions" style="max-width:440px"><label class="meta" for="plan-'+id+'">Membership plan</label><select id="plan-'+id+'" data-plan-select="'+id+'" aria-label="Membership plan"><option value="free" '+(plan==="free"?"selected":"")+'>No access</option>'+(plan==="basic"?'<option value="basic" selected disabled>Legacy membership (existing)</option>':'')+'<option value="premium" '+(plan==="premium"?"selected":"")+'>Premium</option><option value="enterprise" '+(plan==="enterprise"?"selected":"")+'>Enterprise</option></select><label class="meta" for="expiry-'+id+'">Optional expiry</label><input type="date" id="expiry-'+id+'" aria-label="Optional membership expiry date"><button class="primary" data-set-plan="'+id+'">Save plan</button><label class="meta" for="member-groups-'+id+'">Member groups</label><select id="member-groups-'+id+'" data-member-groups="'+id+'" multiple size="'+Math.max(2,Math.min(5,memberGroups.length||2))+'" aria-label="Member groups for this account" '+(memberGroups.length?"":"disabled")+'>'+groupOptions+'</select><button data-save-member-groups="'+id+'" '+(memberGroups.length?"":"disabled")+'>Save group assignments</button><button class="'+(tester?"danger":"")+'" data-tester-user="'+id+'" data-tester="'+tester+'">'+(tester?"Remove tester access":"Allow as tester")+'</button><button class="'+(disabled?"primary":"danger")+'" data-disable-user="'+id+'" data-disabled="'+disabled+'">'+(disabled?"Enable account":"Disable account")+'</button></div></article>';
  }).join("");
  results.querySelectorAll("[data-set-plan]").forEach(button=>button.addEventListener("click",()=>changePlan(button)));
-  results.querySelectorAll("[data-save-member-groups]").forEach(button=>button.addEventListener("click",()=>saveUserGroups(button)));
+ results.querySelectorAll("[data-save-member-groups]").forEach(button=>button.addEventListener("click",()=>saveUserGroups(button)));
  results.querySelectorAll("[data-disable-user]").forEach(button=>button.addEventListener("click",()=>changeDisabled(button)));
  results.querySelectorAll("[data-tester-user]").forEach(button=>button.addEventListener("click",()=>changeTester(button)));
 }
-async function searchUsers(email){
- $("#search-button").disabled=true;results.innerHTML='<div class="empty">Searching securely…</div>';
- try{const data=await api("/api/admin/users?email="+encodeURIComponent(email));renderUsers(data.users||[]);say("Search complete. Changes apply to server-side entitlements.","success")}
- catch(err){results.innerHTML='<div class="empty">Could not load accounts.</div>';say(err.message,"error")}
- finally{$("#search-button").disabled=false}
+async function searchUsers(query,append=false){
+ const normalized=String(query||"").trim();
+ if(normalized.length===1){say("Enter at least two characters, or leave the search blank to list all users.","error");return}
+ const offset=append?loadedUsers.length:0;
+ const button=$("#search-button");
+ if(!append){button.disabled=true;button.textContent="Searching…";results.innerHTML='<div class="empty">Loading user directory…</div>';loadedUsers=[];userSearchTotal=0;userSearchQuery=normalized}
+ $("#load-more-users").disabled=true;
+ try{
+  const data=await api("/api/admin/users?q="+encodeURIComponent(userSearchQuery)+"&limit=100&offset="+offset);
+  const page=data.users||[];
+  loadedUsers=append?loadedUsers.concat(page):page;
+  userSearchTotal=Number(data.total||0);
+  renderUsers(loadedUsers,userSearchTotal);
+  say("User directory loaded.","success");
+ }catch(err){
+  if(!append)results.innerHTML='<div class="empty">Could not load users.</div>';
+  say(err.message||"Could not load accounts.","error");
+ }finally{
+  button.disabled=false;button.textContent="Search users";$("#load-more-users").disabled=false;
+ }
 }
+$("#load-more-users").addEventListener("click",()=>searchUsers(userSearchQuery,true));
 async function changePlan(button){
  const id=button.dataset.setPlan,row=button.closest("[data-user-id]"),plan=row.querySelector("[data-plan-select]").value,date=row.querySelector('input[type="date"]').value;
  let expires_at=null;if(plan!=="free"&&date){expires_at=date+"T23:59:59";if(new Date(expires_at).getTime()<=Date.now()){say("Choose an expiry date in the future.","error");return}}
@@ -153,7 +173,7 @@ async function changeDisabled(button){
  try{const data=await api("/api/admin/users/"+encodeURIComponent(id)+"/disabled",{method:"PATCH",body:JSON.stringify({disabled:!currentlyDisabled})});say(data.message||"Account status updated.","success");await searchUsers($("#email-query").value.trim())}
  catch(err){say(err.message||"Could not update account status.","error");button.disabled=false;button.textContent=currentlyDisabled?"Enable account":"Disable account"}
 }
-$("#search-form").addEventListener("submit",e=>{e.preventDefault();const email=$("#email-query").value.trim();if(email.length<3){say("Enter at least three characters.","error");return}searchUsers(email)});
+$("#search-form").addEventListener("submit",e=>{e.preventDefault();searchUsers($("#email-query").value.trim())});
 $("#invite-form").addEventListener("submit",async e=>{
  e.preventDefault();
  const form=e.currentTarget,email=$("#invite-email").value.trim().toLowerCase(),button=$("#invite-button"),inviteStatus=$("#invite-status");
@@ -171,7 +191,7 @@ $("#invite-form").addEventListener("submit",async e=>{
 const {data:{session},error}=await supabase.auth.getSession();
 if(error||!session){location.replace("/login/")}
 else{
- try{const identity=await api("/api/me");if(identity.user?.role!=="admin"){say("Access denied. This account does not have the server-assigned admin role.","error");}else{consoleEl.hidden=false;say("Administrator verified. Account, membership, downloads, tester access, resources, and inquiry controls are enabled.","success");await Promise.all([loadDownloadGate(),loadMemberGroupsAdmin()]);await loadResourcesAdmin();}}
+ try{const identity=await api("/api/me");if(identity.user?.role!=="admin"){say("Access denied. This account does not have the server-assigned admin role.","error");}else{consoleEl.hidden=false;say("Administrator verified. Account, membership, downloads, tester access, resources, and inquiry controls are enabled.","success");await Promise.all([loadDownloadGate(),loadMemberGroupsAdmin()]);await loadResourcesAdmin();await searchUsers("",false);}}
  catch(err){say(err.message,"error")}
 }
 function renderResourceUserAssignments(groupId){
