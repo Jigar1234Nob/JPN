@@ -189,7 +189,7 @@ $("#invite-form").addEventListener("submit",async e=>{
  }finally{button.disabled=false;button.textContent="Send invitation"}
 });
 const {data:{session},error}=await supabase.auth.getSession();
-if(error||!session){location.replace("/login/")}
+if(error||!session){location.replace("/JPN/login/")}
 else{
  try{const identity=await api("/api/me");if(identity.user?.role!=="admin"){say("Access denied. This account does not have the server-assigned admin role.","error");}else{consoleEl.hidden=false;say("Administrator verified. Account, membership, downloads, tester access, resources, and inquiry controls are enabled.","success");await Promise.all([loadDownloadGate(),loadMemberGroupsAdmin()]);await loadResourcesAdmin();await searchUsers("",false);}}
  catch(err){say(err.message,"error")}
@@ -226,7 +226,7 @@ $("#refresh-plan-requests").addEventListener("click",async()=>{const list=$("#pl
 $("#member-group-form").addEventListener("submit",async e=>{e.preventDefault();const button=$("#member-group-create");button.disabled=true;button.textContent="Creating…";try{await api("/api/admin/member-groups",{method:"POST",body:JSON.stringify({name:$("#member-group-name").value.trim(),description:$("#member-group-description").value.trim()})});e.target.reset();say("Member group created. Search for accounts below to assign people.","success");await loadMemberGroupsAdmin();const email=$("#email-query").value.trim();if(email.length>=3)await searchUsers(email)}catch(err){say(err.message||"Could not create member group.","error")}finally{button.disabled=false;button.textContent="Create member group"}});
 $("#group-form").addEventListener("submit",async e=>{e.preventDefault();const button=$("#group-button");button.disabled=true;try{await api("/api/admin/download-groups",{method:"POST",body:JSON.stringify({name:$("#group-name").value.trim(),description:$("#group-description").value.trim()})});e.target.reset();say("Download group created.","success");await loadResourcesAdmin()}catch(err){say(err.message||"Could not create group.","error")}finally{button.disabled=false}});
 $("#build-form").addEventListener("submit",async e=>{e.preventDefault();const button=$("#build-button");button.disabled=true;try{await api("/api/admin/downloads",{method:"POST",body:JSON.stringify({title:$("#build-title").value.trim(),version:$("#build-version").value.trim(),group_id:$("#build-group").value,github_url:$("#build-url").value.trim(),description:$("#build-description").value.trim()})});e.target.reset();say("Build published to the selected group.","success");await loadResourcesAdmin()}catch(err){say(err.message||"Could not publish build.","error")}finally{button.disabled=false}});
-supabase.auth.onAuthStateChange((event,newSession)=>{if(event==="SIGNED_OUT"||!newSession)location.replace("/login/")});
+supabase.auth.onAuthStateChange((event,newSession)=>{if(event==="SIGNED_OUT"||!newSession)location.replace("/JPN/login/")});
 </script>
 <script src="/JPN/motion.js" defer></script>
  <script src="/JPN/cookies.js" defer></script>
