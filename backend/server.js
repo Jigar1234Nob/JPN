@@ -482,6 +482,60 @@ app.put("/api/admin/users/:id/member-groups", requireUser, requireAdmin, async (
   }
 });
 
+
+// What Works? compatibility catalogue. Writes are restricted to server-verified admins.
+const compatibilityStatuses = new Set(["works", "limited", "unsupported", "untested"]);
+function validateCompatibilityEntry(body) {
+  const name = String(body?.name || "").trim();
+  const status = String(body?.status || "").trim();
+  const category = String(body?.category || "").trim();
+  const details = String(body?.details || "").trim();
+  const notes = String(body?.notes || "").trim();
+  const link = String(body?.link || "").trim();
+  if (!name || name.length > 120) return { error: "Name is required and must be 120 characters or fewer." };
+  if (!compatibilityStatuses.has(status)) return { error: "Choose a valid compatibility status." };
+  if (!category || category.length > 80) return { error: "Category is required and must be 80 characters or fewer." };
+  if (!details || details.length > 1200) return { error: "Details are required and must be 1,200 characters or fewer." };
+  if (!notes || notes.length > 600) return { error: "Notes are required and must be 600 characters or fewer." };
+  if (link && (link.length > 500 || !/^https:\/\//i.test(link))) return { error: "Resource links must use HTTPS." };
+  return { value: { name, status, category, details, notes, link: link || null, updated_by: null } };
+}
+app.get("/api/compatibility", requireUser, async (req, res) => {
+  const { data, error } = await req.userSupabase.from("jpn_compatibility_entries")
+    .select("id,name,status,category,details,notes,link,created_at,updated_at")
+    .order("created_at", { ascending: true });
+  if (error) { console.error("Compatibility list failed:", error.message); return res.status(503).json({ error: "Compatibility catalogue is not configured yet. Apply migration 011 and try again." }); }
+  res.json({ entries: data || [] });
+});
+app.post("/api/admin/compatibility", requireUser, requireAdmin, async (req, res) => {
+  const checked = validateCompatibilityEntry(req.body);
+  if (checked.error) return res.status(400).json({ error: checked.error });
+  const { data, error } = await req.userSupabase.from("jpn_compatibility_entries")
+    .insert({ ...checked.value, updated_by: req.user.id }).select("id,name,status,category,details,notes,link,created_at,updated_at").single();
+  if (error) { console.error("Compatibility entry create failed:", error.message); return res.status(500).json({ error: "Could not add the compatibility entry. Check that migration 011 has been applied." }); }
+  res.status(201).json({ entry: data });
+});
+app.patch("/api/admin/compatibility/:id", requireUser, requireAdmin, async (req, res) => {
+  const id = String(req.params.id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return res.status(400).json({ error: "A valid entry ID is required." });
+  const checked = validateCompatibilityEntry(req.body);
+  if (checked.error) return res.status(400).json({ error: checked.error });
+  const { data, error } = await req.userSupabase.from("jpn_compatibility_entries")
+    .update({ ...checked.value, updated_by: req.user.id, updated_at: new Date().toISOString() }).eq("id", id)
+    .select("id,name,status,category,details,notes,link,created_at,updated_at").maybeSingle();
+  if (error) { console.error("Compatibility entry update failed:", error.message); return res.status(500).json({ error: "Could not update the compatibility entry." }); }
+  if (!data) return res.status(404).json({ error: "That compatibility entry was not found." });
+  res.json({ entry: data });
+});
+app.delete("/api/admin/compatibility/:id", requireUser, requireAdmin, async (req, res) => {
+  const id = String(req.params.id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return res.status(400).json({ error: "A valid entry ID is required." });
+  const { error, count } = await req.userSupabase.from("jpn_compatibility_entries").delete({ count: "exact" }).eq("id", id);
+  if (error) { console.error("Compatibility entry delete failed:", error.message); return res.status(500).json({ error: "Could not delete the compatibility entry." }); }
+  if (!count) return res.status(404).json({ error: "That compatibility entry was not found." });
+  res.json({ ok: true });
+});
+
 app.get("/api/admin/download-groups", requireUser, requireAdmin, async (req, res) => {
   const { data, error } = await req.userSupabase.from("jpn_download_groups").select("id,name,description,sort_order,published").order("sort_order", { ascending: true });
   if (error) { console.error("Admin groups read failed:", error.message); return res.status(500).json({ error: "Could not load download groups right now." }); }
