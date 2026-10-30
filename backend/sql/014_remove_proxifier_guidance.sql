@@ -6,11 +6,6 @@ where lower(name) = 'proxifier';
 
 update public.jpn_compatibility_entries
 set name = 'Discord app',
-    label = null
-where false;
-
-update public.jpn_compatibility_entries
-set name = 'Discord app',
     details = 'Listed as working through the current JPN client setup.',
     notes = 'Keep the JPN connection client running. Availability can still depend on your network and Discord service status.',
     link = 'https://discord.com/download',
