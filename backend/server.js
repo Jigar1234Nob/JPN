@@ -144,7 +144,7 @@ async function canAccessDownloads(req, entitlement) {
   const gate = await getDownloadGate(req.user.id);
   if (gate.tester) return true;
   if (!gate.enabled) return false;
-  return !!entitlement.admin_override || (!!entitlement.paid && ["premium", "enterprise"].includes(String(entitlement.plan || "").toLowerCase()));
+  return !!entitlement.admin_override || (!!entitlement.paid && ["premium", "lifetime", "enterprise"].includes(String(entitlement.plan || "").toLowerCase()));
 }
 
 async function getResourceGroupMemberGroupIds(groupId) {
@@ -313,7 +313,7 @@ app.patch("/api/admin/users/:id/plan", requireUser, requireAdmin, async (req, re
   const userId = String(req.params.id || "");
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) return res.status(400).json({ error: "A valid account ID is required." });
   const plan = String(req.body?.plan || "").toLowerCase();
-  if (!["free", "premium", "enterprise"].includes(plan)) return res.status(400).json({ error: "Choose No access, Premium, or Enterprise." });
+  if (!["free", "premium", "lifetime", "enterprise"].includes(plan)) return res.status(400).json({ error: "Choose No access, Premium, Lifetime, or Enterprise." });
   let expiresAt = null;
   if (req.body.expires_at) {
     const date = new Date(req.body.expires_at);
@@ -788,7 +788,7 @@ app.get("/api/admin/plan-requests", requireUser, requireAdmin, async (_req, res)
         const metadata = user.user_metadata || {};
         const plan = String(metadata.jpn_plan_request || "").toLowerCase();
         const status = String(metadata.jpn_plan_request_status || "pending").toLowerCase();
-        if (["premium", "enterprise"].includes(plan)) {
+        if (["premium", "lifetime", "enterprise"].includes(plan)) {
           requests.push({
             user_id: user.id,
             email: user.email || null,
