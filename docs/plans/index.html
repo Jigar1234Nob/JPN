@@ -146,7 +146,7 @@
 
     .plans {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 20px;
       align-items: stretch;
       padding: 25px 0 65px;
@@ -166,6 +166,17 @@
       border: 2px solid var(--cyan);
       box-shadow: 0 0 45px rgba(34,211,238,.08);
     }
+
+    .plan.inkwell {
+      border: 2px solid #a855f7;
+      background: linear-gradient(145deg, rgba(48,24,75,.96), rgba(20,14,39,.98));
+      box-shadow: 0 0 42px rgba(168,85,247,.10);
+    }
+    .inkwell .popular { background: #a855f7; color: #fff; }
+    .inkwell .price { color: #d8b4fe; }
+    .inkwell .yes, .inkwell .soon { color: #c084fc; }
+    .button.coming-soon { background: rgba(168,85,247,.14); border-color: rgba(192,132,252,.5); color: #e9d5ff; cursor: not-allowed; }
+    .button.coming-soon:hover { transform: none; border-color: rgba(192,132,252,.5); }
 
     .popular {
       position: absolute;
@@ -243,8 +254,8 @@
 
     @media (max-width: 850px) {
       .plans {
-        grid-template-columns: 1fr;
-        max-width: 520px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 760px;
         margin: auto;
         gap: 25px;
       }
@@ -262,6 +273,7 @@
       .nav-links a { font-size: .82rem; }
       .nav-links .button { padding: 9px 10px; }
       .hero { padding-top: 65px; }
+      .plans { grid-template-columns: 1fr; max-width: 520px; }
     }
   
 .site-footer{width:100%;margin:0!important;margin-top:auto!important;padding:20px 0!important;border-top:1px solid var(--border,rgba(204,216,255,.15))!important;border-bottom:0!important;color:var(--muted,#9caac4);font-size:.82rem}
@@ -364,6 +376,22 @@
           <a class="button primary" href="/JPN/login/?mode=signup&amp;plan=lifetime">Request Lifetime plan</a>
         </article>
 
+        <article class="plan inkwell">
+          <span class="popular">FREE · COMING SOON</span>
+          <h2>Inkwell</h2>
+          <p class="description">A free Minecraft Java proxy for connecting to Inkwell Network without needing the JPN VPN.</p>
+          <div class="price">Free</div>
+          <div class="billing">Optional · no JPN subscription required</div>
+          <hr class="rule">
+          <ul class="features">
+            <li><span class="yes">✓</span><span>Minecraft Java proxy access to Inkwell Network</span></li>
+            <li><span class="yes">✓</span><span>No JPN VPN connection required</span></li>
+            <li><span class="yes">✓</span><span>No paid JPN plan required</span></li>
+            <li><span class="soon">◷</span><span>Not available yet. Launch details will be announced.</span></li>
+          </ul>
+          <span class="button coming-soon" aria-disabled="true">Coming soon</span>
+        </article>
+
         <article class="plan">
           <h2>Enterprise</h2>
           <p class="description">JPN app access tailored for teams and organizations.</p>
@@ -408,8 +436,8 @@
         </section>
       </div>
       <aside class="note">
-        <strong>Manual plan requests:</strong>
-        Premium is $3.50/month as a special deal. Lifetime is a one-time $20 payment and includes one free 10K SPCITCLUBMC Server voucher, supplied separately after payment is confirmed. Selecting a plan takes you to account creation or sign-in, then to the Plans dashboard where you submit the request. Requests are reviewed manually. No online checkout, automatic payment, or automatic membership activation is enabled. Payment is arranged directly with JPN after review. The JPN app is released and app-only; no web proxy is provided.
+        <strong>Plan availability:</strong>
+        Premium is $3.50/month as a special deal. Lifetime is a one-time $20 payment and includes one free 10K SPCITCLUBMC Server voucher, supplied separately after payment is confirmed. Selecting a plan takes you to account creation or sign-in, then to the Plans dashboard where you submit the request. Requests are reviewed manually. No online checkout, automatic payment, or automatic membership activation is enabled. Payment is arranged directly with JPN after review. The JPN app is released and app-only; no general web proxy is provided. Inkwell is a separate, optional free Minecraft Java proxy service planned for a future release. It will allow access to Inkwell Network without the JPN VPN or a paid JPN plan. Inkwell is not available yet and cannot be requested or used until launch.
       </aside>
     </section>
   </main>
