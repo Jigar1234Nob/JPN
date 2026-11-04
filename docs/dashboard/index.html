@@ -192,4 +192,5 @@ $("#password-form").addEventListener("submit",async e=>{e.preventDefault();const
 $("#email-form").addEventListener("submit",async e=>{e.preventDefault();const email=$("#new-email").value.trim(),button=$("#save-email");if(!email){say("Enter the new email address.","error");return}button.disabled=true;say("Requesting email change…");try{const {error}=await supabase.auth.updateUser({email});if(error)throw error;$("#email-form").reset();say("Check your inbox for the confirmation email from Supabase to finish changing your email address.","success")}catch(err){say(err.message||"Email could not be updated.","error")}finally{button.disabled=false}});
 </script>  <script src="/JPN/motion.js" defer></script>
  <script src="/JPN/cookies.js" defer></script>
+<script type="module" src="/JPN/announcements.js"></script>
 </body></html>
