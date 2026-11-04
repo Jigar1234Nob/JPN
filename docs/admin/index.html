@@ -30,7 +30,7 @@
 <section id="console" hidden>
 <div class="panel" id="announcements-panel">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Website announcement banners</h2><button id="refresh-announcements" type="button">Refresh banners</button></div>
-  <p class="muted">Publish a site-wide announcement strip at the top of JPN pages. Choose its colour, add an optional link, schedule visibility, and hide or remove it whenever needed.</p>
+  <p class="muted">Publish a site-wide announcement strip at the top of JPN pages. Choose its colour, add an optional link, schedule visibility, and hide or remove it whenever needed.</p><div class="notice">First-time setup: run <a href="https://github.com/Jigar1234Nob/JPN/blob/main/backend/sql/015_site_announcements.sql" target="_blank" rel="noopener noreferrer" style="text-decoration:underline">migration 015</a> in the Supabase SQL Editor connected to the JPN backend project. The Render backend must have its existing <code>SUPABASE_SERVICE_ROLE_KEY</code> configured.</div>
   <form id="announcement-form" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
     <input id="announcement-title" placeholder="Banner title" aria-label="Banner title" maxlength="120" required>
     <select id="announcement-style" aria-label="Banner colour"><option value="info">Blue · Information</option><option value="success">Green · Success</option><option value="warning">Amber · Important notice</option><option value="promo">Purple · Promotion</option></select>
