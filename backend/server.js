@@ -868,6 +868,150 @@ app.patch("/api/admin/users/:id/entitlement", requireUser, requireAdmin, async (
   res.json({ entitlement: data?.[0] || null });
 });
 
+
+function validateAnnouncement(input, partial = false) {
+  const value = {};
+  if (!partial || Object.prototype.hasOwnProperty.call(input || {}, "title")) {
+    value.title = String(input?.title || "").trim();
+    if (!value.title || value.title.length > 120) return { error: "Title is required and must be 120 characters or fewer." };
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(input || {}, "message")) {
+    value.message = String(input?.message || "").trim();
+    if (!value.message || value.message.length > 500) return { error: "Message is required and must be 500 characters or fewer." };
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(input || {}, "style")) {
+    value.style = String(input?.style || "info");
+    if (!["info", "success", "warning", "promo"].includes(value.style)) return { error: "Choose a valid banner style." };
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(input || {}, "link_url")) {
+    const link = String(input?.link_url || "").trim();
+    if (link) {
+      let parsed;
+      try {
+        if (link.startsWith("/") && !link.startsWith("//")) parsed = new URL(link, "https://jpn.invalid");
+        else parsed = new URL(link);
+      } catch { return { error: "Enter a valid HTTPS or site-relative link." }; }
+      if (parsed.protocol !== "https:" || link.length > 500) return { error: "Banner links must use HTTPS or a site-relative path." };
+      value.link_url = link;
+    } else value.link_url = null;
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(input || {}, "link_label")) {
+    const label = String(input?.link_label || "").trim();
+    if (label.length > 40) return { error: "Link label must be 40 characters or fewer." };
+    value.link_label = label || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "link_url") || Object.prototype.hasOwnProperty.call(value, "link_label")) {
+    const link = Object.prototype.hasOwnProperty.call(value, "link_url") ? value.link_url : undefined;
+    const label = Object.prototype.hasOwnProperty.call(value, "link_label") ? value.link_label : undefined;
+    if ((link === null && label) || (link && !label)) return { error: "Provide both a link URL and a link label, or leave both blank." };
+  }
+  for (const key of ["starts_at", "ends_at"]) {
+    if (!partial || Object.prototype.hasOwnProperty.call(input || {}, key)) {
+      const raw = String(input?.[key] || "").trim();
+      if (!raw) value[key] = null;
+      else {
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return { error: "Enter valid banner start and end dates." };
+        value[key] = date.toISOString();
+      }
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "starts_at") && Object.prototype.hasOwnProperty.call(value, "ends_at") && value.starts_at && value.ends_at && new Date(value.ends_at) <= new Date(value.starts_at)) {
+    return { error: "The banner end time must be after its start time." };
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(input || {}, "enabled")) {
+    if (typeof input?.enabled !== "boolean") return { error: "enabled must be true or false." };
+    value.enabled = input.enabled;
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(input || {}, "sort_order")) {
+    const order = input?.sort_order === undefined ? 0 : Number(input.sort_order);
+    if (!Number.isInteger(order) || order < -1000 || order > 1000) return { error: "Sort order must be a whole number from -1000 to 1000." };
+    value.sort_order = order;
+  }
+  return { value };
+}
+
+app.get("/api/announcements", async (_req, res) => {
+  if (!adminAuthClient) return res.json({ announcements: [] });
+  try {
+    const now = new Date().toISOString();
+    const { data, error } = await adminAuthClient.from("jpn_site_announcements")
+      .select("id,title,message,link_url,link_label,style,starts_at,ends_at,sort_order")
+      .eq("enabled", true).order("sort_order", { ascending: true }).order("created_at", { ascending: false });
+    if (error) throw error;
+    const announcements = (data || []).filter(item =>
+      (!item.starts_at || new Date(item.starts_at).getTime() <= Date.now()) &&
+      (!item.ends_at || new Date(item.ends_at).getTime() > Date.now())
+    );
+    res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
+    res.json({ announcements });
+  } catch (error) {
+    console.error("Public announcement read failed:", error.message);
+    res.status(503).json({ error: "Announcements are temporarily unavailable.", announcements: [] });
+  }
+});
+
+app.get("/api/admin/announcements", requireUser, requireAdmin, async (_req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Announcement management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  try {
+    const { data, error } = await adminAuthClient.from("jpn_site_announcements")
+      .select("id,title,message,link_url,link_label,style,enabled,starts_at,ends_at,sort_order,created_at,updated_at")
+      .order("sort_order", { ascending: true }).order("created_at", { ascending: false });
+    if (error) throw error;
+    res.json({ announcements: data || [] });
+  } catch (error) {
+    console.error("Admin announcement list failed:", error.message);
+    res.status(500).json({ error: "Could not load announcements. Run migration 015_site_announcements.sql in Supabase." });
+  }
+});
+
+app.post("/api/admin/announcements", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Announcement management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  const checked = validateAnnouncement(req.body);
+  if (checked.error) return res.status(400).json({ error: checked.error });
+  try {
+    const { data, error } = await adminAuthClient.from("jpn_site_announcements")
+      .insert({ ...checked.value, created_by: req.user.id })
+      .select("id,title,message,link_url,link_label,style,enabled,starts_at,ends_at,sort_order,created_at,updated_at").single();
+    if (error) throw error;
+    res.status(201).json({ announcement: data, message: "Announcement created." });
+  } catch (error) {
+    console.error("Announcement create failed:", error.message);
+    res.status(500).json({ error: "Could not create this announcement. Confirm migration 015 has been applied." });
+  }
+});
+
+app.patch("/api/admin/announcements/:id", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Announcement management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  const checked = validateAnnouncement(req.body, true);
+  if (checked.error) return res.status(400).json({ error: checked.error });
+  if (!Object.keys(checked.value).length) return res.status(400).json({ error: "No announcement changes were provided." });
+  try {
+    const { data, error } = await adminAuthClient.from("jpn_site_announcements")
+      .update({ ...checked.value, updated_at: new Date().toISOString() }).eq("id", req.params.id)
+      .select("id,title,message,link_url,link_label,style,enabled,starts_at,ends_at,sort_order,created_at,updated_at").maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Announcement not found." });
+    res.json({ announcement: data, message: "Announcement updated." });
+  } catch (error) {
+    console.error("Announcement update failed:", error.message);
+    res.status(500).json({ error: "Could not update this announcement." });
+  }
+});
+
+app.delete("/api/admin/announcements/:id", requireUser, requireAdmin, async (req, res) => {
+  if (!adminAuthClient) return res.status(503).json({ error: "Announcement management requires SUPABASE_SERVICE_ROLE_KEY on the backend." });
+  try {
+    const { data, error } = await adminAuthClient.from("jpn_site_announcements").delete().eq("id", req.params.id).select("id").maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Announcement not found." });
+    res.json({ success: true, message: "Announcement deleted." });
+  } catch (error) {
+    console.error("Announcement delete failed:", error.message);
+    res.status(500).json({ error: "Could not delete this announcement." });
+  }
+});
+
 app.use((err, _req, res, _next) => {
   if (err && err.type === "entity.too.large") return res.status(413).json({ error: "Request body is too large." });
   if (err && /CORS/i.test(err.message || "")) return res.status(403).json({ error: "This website is not allowed to call the JPN API." });
