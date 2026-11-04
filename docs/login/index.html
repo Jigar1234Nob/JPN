@@ -70,4 +70,5 @@ $("#reset").addEventListener("click",async()=>{const email=$("#email").value.tri
 $("#recovery-form").addEventListener("submit",async e=>{e.preventDefault();const next=$("#recovery-password").value,confirm=$("#recovery-confirm").value,button=$("#recovery-submit");if(next.length<8){say("Use a password with at least 8 characters.","error");return}if(next!==confirm){say("The passwords do not match.","error");return}button.disabled=true;say("Saving your new password…");try{const {error}=await supabase.auth.updateUser({password:next});if(error)throw error;say("Password updated. Taking you to your account…","success");setTimeout(()=>location.replace("/JPN/dashboard/"),900)}catch(err){say(err.message||"Unable to update password.","error")}finally{button.disabled=false}});
 </script>  <script src="/JPN/motion.js" defer></script>
  <script src="/JPN/cookies.js" defer></script>
+<script type="module" src="/JPN/announcements.js"></script>
 </body></html>
