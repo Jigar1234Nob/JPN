@@ -28,6 +28,23 @@
 <div class="eyebrow">Administration</div><h1>Membership control</h1><p class="muted">Manually grant or revoke paid membership. No checkout or automatic billing is enabled.</p>
 <div id="status" class="notice" role="status" aria-live="polite">Verifying administrator access…</div>
 <section id="console" hidden>
+<div class="panel" id="announcements-panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Website announcement banners</h2><button id="refresh-announcements" type="button">Refresh banners</button></div>
+  <p class="muted">Publish a site-wide announcement strip at the top of JPN pages. Choose its colour, add an optional link, schedule visibility, and hide or remove it whenever needed.</p>
+  <form id="announcement-form" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+    <input id="announcement-title" placeholder="Banner title" aria-label="Banner title" maxlength="120" required>
+    <select id="announcement-style" aria-label="Banner colour"><option value="info">Blue · Information</option><option value="success">Green · Success</option><option value="warning">Amber · Important notice</option><option value="promo">Purple · Promotion</option></select>
+    <textarea id="announcement-message" placeholder="Announcement message" aria-label="Announcement message" maxlength="500" required style="grid-column:1/-1;min-height:90px;padding:12px 13px;border-radius:10px;border:1px solid var(--border);background:#080d1b;color:var(--text);font:inherit"></textarea>
+    <input id="announcement-link-url" type="text" placeholder="Optional link URL (https://… or /JPN/…)" aria-label="Optional link URL" maxlength="500">
+    <input id="announcement-link-label" placeholder="Optional link text (e.g. Learn more)" aria-label="Optional link text" maxlength="40">
+    <label class="meta">Show from (optional)<input id="announcement-starts" type="datetime-local" style="display:block;width:100%;margin-top:5px"></label>
+    <label class="meta">Hide after (optional)<input id="announcement-ends" type="datetime-local" style="display:block;width:100%;margin-top:5px"></label>
+    <label class="meta">Display order (lower numbers appear first)<input id="announcement-order" type="number" min="-1000" max="1000" step="1" value="0" style="display:block;width:100%;margin-top:5px"></label>
+    <label class="meta" style="display:flex;align-items:center;gap:9px"><input id="announcement-enabled" type="checkbox" checked style="min-width:auto"> Publish immediately (subject to schedule)</label>
+    <div class="formrow" style="grid-column:1/-1"><button class="primary" id="announcement-save" type="submit">Publish announcement</button><button id="announcement-cancel" type="button" hidden>Cancel edit</button><span class="foot">Changes are saved to the JPN backend and appear on website pages automatically.</span></div>
+  </form>
+  <div id="announcements-list" style="margin-top:18px"><div class="empty">Loading announcements…</div></div>
+</div>
 <div class="panel"><h2>Global download access</h2><p class="muted">Emergency switch for the entire JPN download library. When OFF, paid memberships and administrator status do not grant download access. Only accounts explicitly marked as testers can download. When ON, active Premium/Lifetime/Enterprise members and testers can access downloads.</p><div class="formrow"><span id="download-gate-status" class="pill off">Checking setting…</span><button id="download-gate-toggle" class="danger" type="button" disabled>Loading…</button><button id="download-gate-refresh" type="button">Refresh status</button></div><div id="download-gate-help" class="foot" style="margin-top:12px">Access is enforced by the backend and Supabase database policies, not just by hiding dashboard buttons.</div></div>
 <div class="panel"><h2>Create an account</h2><p class="muted">Send a secure invitation email. The person finishes setting up their account through Supabase; no password is shown or stored in this admin page.</p>
 <form id="invite-form" class="formrow"><input id="invite-email" type="email" autocomplete="email" placeholder="new-member@example.com" aria-label="Email address for new account" required><button class="primary" id="invite-button" type="submit">Send invitation</button></form>
@@ -94,6 +111,104 @@ async function api(path,options={}){
  return payload;
 }
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+let editingAnnouncementId = null;
+const announcementForm = $("#announcement-form");
+function toLocalDateTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0,16);
+}
+function resetAnnouncementForm() {
+  editingAnnouncementId = null;
+  announcementForm.reset();
+  $("#announcement-enabled").checked = true;
+  $("#announcement-order").value = "0";
+  $("#announcement-save").textContent = "Publish announcement";
+  $("#announcement-cancel").hidden = true;
+}
+function fillAnnouncementForm(item) {
+  editingAnnouncementId = item.id;
+  $("#announcement-title").value = item.title || "";
+  $("#announcement-style").value = item.style || "info";
+  $("#announcement-message").value = item.message || "";
+  $("#announcement-link-url").value = item.link_url || "";
+  $("#announcement-link-label").value = item.link_label || "";
+  $("#announcement-starts").value = toLocalDateTime(item.starts_at);
+  $("#announcement-ends").value = toLocalDateTime(item.ends_at);
+  $("#announcement-order").value = String(item.sort_order ?? 0);
+  $("#announcement-enabled").checked = item.enabled === true;
+  $("#announcement-save").textContent = "Save announcement changes";
+  $("#announcement-cancel").hidden = false;
+  $("#announcements-panel").scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function loadAnnouncements() {
+  const host = $("#announcements-list");
+  host.innerHTML = '<div class="empty">Loading announcements…</div>';
+  try {
+    const data = await api("/api/admin/announcements");
+    const items = data.announcements || [];
+    host.innerHTML = items.length ? items.map(item => {
+      const state = item.enabled ? '<span class="pill">PUBLISHED</span>' : '<span class="pill off">HIDDEN</span>';
+      const schedule = (item.starts_at ? "From " + new Date(item.starts_at).toLocaleString() : "No start date") + " · " + (item.ends_at ? "Until " + new Date(item.ends_at).toLocaleString() : "No end date");
+      return '<article class="user"><div><div class="email">' + escapeHtml(item.title) + ' ' + state + '</div><div class="meta">' + escapeHtml(item.style.toUpperCase()) + ' · ' + escapeHtml(schedule) + '</div><p style="margin:6px 0">' + escapeHtml(item.message) + '</p>' + (item.link_url ? '<div class="meta">' + escapeHtml(item.link_label) + ' → ' + escapeHtml(item.link_url) + '</div>' : '') + '</div><div class="user-actions"><button type="button" data-announcement-edit="' + escapeHtml(item.id) + '">Edit</button><button type="button" data-announcement-toggle="' + escapeHtml(item.id) + '" data-enabled="' + String(item.enabled) + '">' + (item.enabled ? "Hide" : "Publish") + '</button><button type="button" class="danger" data-announcement-delete="' + escapeHtml(item.id) + '">Delete</button></div></article>';
+    }).join("") : '<div class="empty">No announcement banners yet. Create one above.</div>';
+    host.querySelectorAll("[data-announcement-edit]").forEach(button => button.addEventListener("click", () => {
+      const item = items.find(entry => entry.id === button.dataset.announcementEdit);
+      if (item) fillAnnouncementForm(item);
+    }));
+    host.querySelectorAll("[data-announcement-toggle]").forEach(button => button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        await api("/api/admin/announcements/" + encodeURIComponent(button.dataset.announcementToggle), {method:"PATCH",body:JSON.stringify({enabled:button.dataset.enabled !== "true"})});
+        say("Announcement visibility updated.", "success");
+        await loadAnnouncements();
+      } catch (err) { say(err.message || "Could not change banner visibility.", "error"); button.disabled = false; }
+    }));
+    host.querySelectorAll("[data-announcement-delete]").forEach(button => button.addEventListener("click", async () => {
+      if (!confirm("Permanently delete this announcement banner?")) return;
+      button.disabled = true;
+      try {
+        await api("/api/admin/announcements/" + encodeURIComponent(button.dataset.announcementDelete), {method:"DELETE"});
+        if (editingAnnouncementId === button.dataset.announcementDelete) resetAnnouncementForm();
+        say("Announcement deleted.", "success");
+        await loadAnnouncements();
+      } catch (err) { say(err.message || "Could not delete this banner.", "error"); button.disabled = false; }
+    }));
+  } catch (err) {
+    host.innerHTML = '<div class="empty">Announcement management could not load. Run migration 015_site_announcements.sql in Supabase, then check the Render backend.</div>';
+    say(err.message || "Could not load announcements.", "error");
+  }
+}
+announcementForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = $("#announcement-save");
+  const payload = {
+    title: $("#announcement-title").value.trim(),
+    style: $("#announcement-style").value,
+    message: $("#announcement-message").value.trim(),
+    link_url: $("#announcement-link-url").value.trim(),
+    link_label: $("#announcement-link-label").value.trim(),
+    starts_at: $("#announcement-starts").value ? new Date($("#announcement-starts").value).toISOString() : null,
+    ends_at: $("#announcement-ends").value ? new Date($("#announcement-ends").value).toISOString() : null,
+    sort_order: Number($("#announcement-order").value || 0),
+    enabled: $("#announcement-enabled").checked
+  };
+  button.disabled = true;
+  button.textContent = "Saving…";
+  try {
+    const path = editingAnnouncementId ? "/api/admin/announcements/" + encodeURIComponent(editingAnnouncementId) : "/api/admin/announcements";
+    const result = await api(path, {method:editingAnnouncementId ? "PATCH" : "POST",body:JSON.stringify(payload)});
+    say(result.message || "Announcement saved.", "success");
+    resetAnnouncementForm();
+    await loadAnnouncements();
+  } catch (err) { say(err.message || "Could not save this announcement.", "error"); }
+  finally { button.disabled = false; button.textContent = editingAnnouncementId ? "Save announcement changes" : "Publish announcement"; }
+});
+$("#announcement-cancel").addEventListener("click", resetAnnouncementForm);
+$("#refresh-announcements").addEventListener("click", loadAnnouncements);
 function renderUsers(users,total=userSearchTotal){
  $("#count").textContent="Showing "+users.length+" of "+total+" account"+(total===1?"":"s");
  $("#load-more-users").hidden=users.length>=total;
@@ -191,7 +306,7 @@ $("#invite-form").addEventListener("submit",async e=>{
 const {data:{session},error}=await supabase.auth.getSession();
 if(error||!session){location.replace("/JPN/login/")}
 else{
- try{const identity=await api("/api/me");if(identity.user?.role!=="admin"){say("Access denied. This account does not have the server-assigned admin role.","error");}else{consoleEl.hidden=false;say("Administrator verified. Account, membership, downloads, tester access, resources, and inquiry controls are enabled.","success");await Promise.all([loadDownloadGate(),loadMemberGroupsAdmin()]);await loadResourcesAdmin();await searchUsers("",false);}}
+ try{const identity=await api("/api/me");if(identity.user?.role!=="admin"){say("Access denied. This account does not have the server-assigned admin role.","error");}else{consoleEl.hidden=false;say("Administrator verified. Account, membership, downloads, tester access, resources, and inquiry controls are enabled.","success");await Promise.all([loadDownloadGate(),loadMemberGroupsAdmin(),loadAnnouncements()]);await loadResourcesAdmin();await searchUsers("",false);}}
  catch(err){say(err.message,"error")}
 }
 function renderResourceUserAssignments(groupId){
