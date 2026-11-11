@@ -1,6 +1,6 @@
 # JPN
-Independent technology project designed specifically for the St Peter’s College Cranbourne West Campus community
+Independent private-networking service for individuals and organisations
 
-JPN is an independent, app-focused technology project designed for the St Peter’s College Cranbourne West Campus community. It is not an official College service or endorsed by the College unless formally authorised.
+JPN is an independently operated, app-focused private-networking service built for individuals and organisations. It is not affiliated with any school, college or other institution.
 
 Website: https://jigar1234nob.github.io/JPN/
