@@ -218,6 +218,32 @@
     .float-card.one { top: 45px; right: 0; }
     .float-card.two { bottom: 45px; left: 0; }
 
+    .sales-notice {
+      margin: 24px auto 0;
+      padding: 22px 26px;
+      border: 1px solid rgba(255, 174, 92, .42);
+      border-left: 5px solid #ffad5c;
+      border-radius: 18px;
+      background: linear-gradient(110deg, rgba(120, 65, 24, .24), rgba(16,24,43,.92));
+      box-shadow: 0 16px 45px rgba(0,0,0,.16);
+    }
+    .sales-notice .notice-label {
+      display: inline-block;
+      margin-bottom: 7px;
+      color: #ffc184;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .sales-notice h2 {
+      margin: 0 0 9px;
+      font-size: clamp(1.35rem, 3vw, 1.8rem);
+    }
+    .sales-notice p { margin: 7px 0 0; color: var(--muted); }
+    .sales-notice strong { color: var(--text); }
+    @media(max-width:600px) { .sales-notice { padding: 19px; } }
+
     .section { padding: 80px 0; }
 
     .section-head {
@@ -367,21 +393,29 @@
         <a href="/JPN/plans/">JPN access</a>
         <span id="member-nav" hidden style="display:contents"><a href="/JPN/dashboard/">My Account</a><a href="/JPN/dashboard/#downloads">Downloads</a></span>
         <a class="button" id="nav-login" href="/JPN/login/">Log in</a>
-        <a class="button primary" id="nav-signup" href="/JPN/login/?mode=signup">Create account</a>
+        <a class="button primary" id="nav-signup" href="/JPN/login/?mode=signup" hidden>Create account</a>
         <a class="button primary" id="nav-dashboard" href="/JPN/dashboard/" hidden>Dashboard</a>
       </div>
     </nav>
   </header>
 
   <main>
+    <section class="container sales-notice" aria-label="JPN sales closure notice">
+      <span class="notice-label">Stopped Selling</span>
+      <h2>JPN has stopped selling new memberships.</h2>
+      <p>Thank you to everyone who supported JPN. <strong>If you paid for a one-month Premium membership, your JPN access will keep working until the end of the month you have already paid for.</strong> No further monthly renewals will be sold or charged.</p>
+      <p><strong>Lifetime members:</strong> your JPN access will remain available until <strong>31 December 2027</strong>, after which the JPN service will end.</p>
+      <p>These dates apply to existing paid memberships only. New memberships and purchases are closed.</p>
+    </section>
+
     <section class="hero container">
       <div>
-        <span class="eyebrow"><span class="dot"></span> JPN APP · NOW AVAILABLE</span>
+        <span class="eyebrow"><span class="dot"></span> STOPPED SELLING</span>
         <h1>Your connection.<br><span class="gradient">Your control.</span></h1>
-        <p>Meet JPN, an independently operated private-networking project. Explore the service, manage your account and find setup information.</p>
+        <p>JPN is no longer available for new purchases. Existing members can continue using their access for the remaining period described below.</p>
         <div class="actions">
-          <a class="button primary" href="/JPN/plans/">Explore JPN ↗</a>
-          <a class="button" href="/JPN/login/?mode=signup">Get started</a>
+          <a class="button primary" href="/JPN/login/">Existing member sign in</a>
+          <a class="button" href="/JPN/plans/">Access information</a>
         </div>
         <p style="font-size:.86rem;margin-top:16px">App-focused by design. JPN does not offer a web proxy.</p>
       </div>
@@ -423,11 +457,11 @@
 
     <section class="section container">
       <div class="countdown-panel">
-        <span class="eyebrow">Getting started with JPN</span>
-        <h2>Set up in <span class="gradient">a few steps.</span></h2>
-        <p>Create an account to manage your JPN profile and view service information. Download availability is shown in your account.</p>
+        <span class="eyebrow">Existing members</span>
+        <h2>Manage your <span class="gradient">existing access.</span></h2>
+        <p>New memberships are closed. Existing members can sign in to view their account and available downloads until their access end date.</p>
         <div class="actions" style="justify-content:center">
-          <a class="button primary" href="/JPN/login/?mode=signup">Create your account</a>
+          <a class="button primary" href="/JPN/login/">Sign in</a>
           <a class="button" href="/JPN/plans/">About JPN access</a>
         </div>
       </div>
@@ -445,12 +479,13 @@
     const loginButton = document.getElementById("nav-login");
     const signupButton = document.getElementById("nav-signup");
     const dashboardButton = document.getElementById("nav-dashboard");
+    signupButton.hidden = true;
     const syncMemberNav = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       memberNav.hidden = !session;
       memberNav.style.display = session ? "contents" : "none";
       loginButton.hidden = !!session;
-      signupButton.hidden = !!session;
+      signupButton.hidden = true;
       dashboardButton.hidden = !session;
     };
     await syncMemberNav();
@@ -458,7 +493,7 @@
 
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    // Account creation is open while JPN features roll out in stages.
+    // New JPN memberships and sales are closed.
     const launchAction = document.getElementById("launch-action");
     const timerMessage = document.getElementById("timer-message");
     if (timerMessage) timerMessage.textContent = "JPN rollout: Wednesday, 28 October to Friday, 30 October 2026.";
