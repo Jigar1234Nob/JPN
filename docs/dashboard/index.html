@@ -131,8 +131,8 @@ async function submitPlanRequest(plan){
   currentUser=data.user;renderPlanRequest();say("Your "+plan+" plan request was submitted. No payment was taken and paid access has not been activated.","success");
  }catch(err){button.disabled=false;button.textContent="Request "+plan[0].toUpperCase()+plan.slice(1)+" plan";planStatus(err.message||"Could not submit your request.","error")}
 }
-$("#request-premium").addEventListener("click",()=>submitPlanRequest("premium"));
-$("#request-lifetime").addEventListener("click",()=>submitPlanRequest("lifetime"));
+$("#request-premium")?.addEventListener("click",()=>submitPlanRequest("premium"));
+$("#request-lifetime")?.addEventListener("click",()=>submitPlanRequest("lifetime"));
 let downloadsLoaded=false;async function loadDownloads(force=false){
  if(downloadsLoaded&&!force)return;
  const status=$("#downloads-status"),grid=$("#downloads-grid");
