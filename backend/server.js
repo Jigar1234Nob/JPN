@@ -287,26 +287,10 @@ app.post("/api/downloads/:id/url", requireUser, async (req, res) => {
   }
 });
 
-app.post("/api/inquiries/enterprise", rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false }), async (req, res) => {
-  const name = String(req.body?.name || "").trim();
-  const email = String(req.body?.email || "").trim().toLowerCase();
-  const organization = String(req.body?.organization || "").trim();
-  const message = String(req.body?.message || "").trim();
-  if (name.length < 1 || name.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
-      organization.length > 160 || message.length < 10 || message.length > 4000) {
-    return res.status(400).json({ error: "Check the required fields and try again." });
-  }
-  try {
-    const { error } = await authClient.from("jpn_enterprise_inquiries").insert({ name, email, organization, message });
-    if (error) throw error;
-
-    // Enterprise inquiries are saved in Supabase and reviewed in the JPN admin console.
-    // Supabase Auth SMTP is for authentication messages, not arbitrary inquiry notifications.
-    return res.status(201).json({ message: "Your Enterprise inquiry has been received. The JPN team can review it and contact you." });
-  } catch (error) {
-    console.error("Enterprise inquiry submission failed:", error.message);
-    return res.status(500).json({ error: "Your inquiry could not be submitted right now. Please try again later." });
-  }
+app.post("/api/inquiries/enterprise", (_req, res) => {
+  return res.status(410).json({
+    error: "JPN is not accepting new Enterprise inquiries or sales at this time."
+  });
 });
 
 app.patch("/api/admin/users/:id/plan", requireUser, requireAdmin, async (req, res) => {
