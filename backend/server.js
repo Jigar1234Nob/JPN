@@ -504,7 +504,7 @@ function validateCompatibilityEntry(body) {
   if (link && (link.length > 500 || !/^https:\/\//i.test(link))) return { error: "Resource links must use HTTPS." };
   return { value: { name, status, category, details, notes, link: link || null, updated_by: null } };
 }
-app.get("/api/compatibility", requireUser, async (req, res) => {
+app.get("/api/compatibility", requireUser, async (req, res) => {\n  if (!req.isAdmin) return res.status(410).json({ error: "JPN has permanently closed. The compatibility service is no longer available." });
   const { data, error } = await req.userSupabase.from("jpn_compatibility_entries")
     .select("id,name,status,category,details,notes,link,created_at,updated_at")
     .order("created_at", { ascending: true });
