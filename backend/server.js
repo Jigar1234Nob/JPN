@@ -45,7 +45,8 @@ app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 120, standardHeader
 const authEmailLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
 const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
 
-app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {\n  return res.status(410).json({ error: "JPN is permanently closed. Account registration is disabled." });
+app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
+  return res.status(410).json({ error: "JPN is permanently closed. Account registration is disabled." });
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const first_name = String(req.body?.first_name || "").trim();
@@ -501,7 +502,8 @@ function validateCompatibilityEntry(body) {
   if (link && (link.length > 500 || !/^https:\/\//i.test(link))) return { error: "Resource links must use HTTPS." };
   return { value: { name, status, category, details, notes, link: link || null, updated_by: null } };
 }
-app.get("/api/compatibility", requireUser, async (req, res) => {\n  if (!req.isAdmin) return res.status(410).json({ error: "JPN has permanently closed. The compatibility service is no longer available." });
+app.get("/api/compatibility", requireUser, async (req, res) => {
+  if (!req.isAdmin) return res.status(410).json({ error: "JPN has permanently closed. The compatibility service is no longer available." });
   const { data, error } = await req.userSupabase.from("jpn_compatibility_entries")
     .select("id,name,status,category,details,notes,link,created_at,updated_at")
     .order("created_at", { ascending: true });
