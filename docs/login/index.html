@@ -34,18 +34,18 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=s=>document.querySelector(s),form=$("#auth-form"),message=$("#message"),submit=$("#submit"),password=$("#password"),title=$("#auth-title"),subtitle=$("#auth-subtitle"),resetTools=$("#reset-tools"),firstName=$("#first-name"),lastName=$("#last-name");
 let mode="signin";
 const launchGate=$("#launch-gate"),signinTab=$("#signin-tab"),signupTab=$("#signup-tab"),emailInput=$("#email"),passwordInput=$("#password"),topSignup=$("#top-signup"),termsAccept=$("#terms-accept"),termsLabel=$("#terms-accept-label");
-const isLoginClosed=()=>false;
+const isLoginClosed=()=>true;
 function updateLoginGate(){
   launchGate.classList.remove("hidden");
-  launchGate.textContent="Account creation is open. New accounts may need to confirm their email address before signing in.";
+  launchGate.textContent="JPN has permanently closed. New account registration is disabled, and all membership access has ended.";
   launchGate.dataset.kind="success";
   signinTab.disabled=false;
-  signupTab.disabled=false;
+  signupTab.disabled=true;
   passwordInput.disabled=false;
   submit.disabled=false;
-  topSignup.removeAttribute("aria-disabled");
-  topSignup.style.opacity="1";
-  topSignup.style.pointerEvents="";
+  topSignup.setAttribute("aria-disabled","true");
+  topSignup.style.opacity=".45";
+  topSignup.style.pointerEvents="none";
   if(!recoveryMode){title.textContent=mode==="signup"?"Create your account":"Welcome back.";subtitle.textContent=mode==="signup"?"Set up your JPN account in a few steps.":"Sign in to continue to your account.";}
 }
 
@@ -53,7 +53,7 @@ const recoveryLink=location.hash.includes("type=recovery")||new URLSearchParams(
 let recoveryMode=recoveryLink;
 const say=(text,kind="info")=>{message.textContent=text;message.dataset.kind=kind};
 const values=()=>({email:$("#email").value.trim(),password:password.value});
-const setMode=next=>{mode=next;const signup=mode==="signup";$("#signin-tab").setAttribute("aria-selected",String(!signup));$("#signup-tab").setAttribute("aria-selected",String(signup));title.textContent=signup?"Create your account":"Welcome back.";subtitle.textContent=signup?"Set up your JPN account in a few steps.":"Sign in to continue to your account.";submit.textContent=signup?"Create JPN account":"Sign in securely";password.autocomplete=signup?"new-password":"current-password";resetTools.classList.toggle("hidden",signup);document.querySelectorAll(".signup-only").forEach(el=>el.classList.toggle("hidden",!signup));firstName.required=signup;lastName.required=signup;termsLabel.classList.toggle("hidden",!signup);termsAccept.required=signup;if(!signup)termsAccept.checked=false;say("");};
+const setMode=next=>{if(next==="signup"&&isLoginClosed()){next="signin";say("JPN is permanently closed. Account registration is disabled.","error");}mode=next;const signup=mode==="signup";$("#signin-tab").setAttribute("aria-selected",String(!signup));$("#signup-tab").setAttribute("aria-selected",String(signup));title.textContent=signup?"Create your account":"Welcome back.";subtitle.textContent=signup?"Set up your JPN account in a few steps.":"Sign in to continue to your account.";submit.textContent=signup?"Create JPN account":"Sign in securely";password.autocomplete=signup?"new-password":"current-password";resetTools.classList.toggle("hidden",signup);document.querySelectorAll(".signup-only").forEach(el=>el.classList.toggle("hidden",!signup));firstName.required=signup;lastName.required=signup;termsLabel.classList.toggle("hidden",!signup);termsAccept.required=signup;if(!signup)termsAccept.checked=false;say("");};
 const showRecovery=()=>{recoveryMode=true;form.classList.add("hidden");document.querySelector(".tabs").classList.add("hidden");$("#recovery-form").classList.remove("hidden");title.textContent="Choose a new password";subtitle.textContent="Set a new password for your JPN account.";say("Enter and confirm your new password.");};
 $("#signin-tab").addEventListener("click",()=>setMode("signin"));$("#signup-tab").addEventListener("click",()=>setMode("signup"));$("#top-signup").addEventListener("click",e=>{if(isLoginClosed()){e.preventDefault();updateLoginGate();return;}setMode("signup");});
 $("#back-to-signin").addEventListener("click",()=>{history.replaceState(null,"",location.pathname);location.reload();});
