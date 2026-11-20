@@ -123,11 +123,7 @@ async function requireUser(req, res, next) {
 
 async function getEntitlement(req) {
   if (req.isAdmin) return { paid: true, expires_at: null, admin_override: true };
-  const { data, error } = await req.userSupabase.from("jpn_entitlements")
-    .select("paid,plan,expires_at,updated_at").eq("user_id", req.user.id).maybeSingle();
-  if (error) throw error;
-  const active = !!data?.paid && (!data.expires_at || new Date(data.expires_at).getTime() > Date.now());
-  return { paid: active, plan: data?.plan || (data?.paid ? "premium" : "free"), expires_at: data?.expires_at || null, updated_at: data?.updated_at || null, admin_override: false };
+  return { paid: false, plan: "closed", expires_at: null, admin_override: false };
 }
 
 
@@ -141,6 +137,7 @@ async function getDownloadGate(userId) {
   return { enabled: settingResult.data?.enabled === true, tester: !!testerResult.data };
 }
 async function canAccessDownloads(req, entitlement) {
+  if (!req.isAdmin) return false;
   const gate = await getDownloadGate(req.user.id);
   if (gate.tester) return true;
   if (!gate.enabled) return false;
