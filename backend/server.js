@@ -45,7 +45,7 @@ app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 120, standardHeader
 const authEmailLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
 const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
 
-app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {
+app.post("/api/auth/signup", authEmailLimiter, async (req, res) => {\n  return res.status(410).json({ error: "JPN is permanently closed. Account registration is disabled." });
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const first_name = String(req.body?.first_name || "").trim();
@@ -96,7 +96,7 @@ app.post("/api/auth/password-reset", authEmailLimiter, async (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => res.json({
-  ok: true, service: "jpn-api", version: "1.7.0", features: ["admin-invitations", "tier-management", "lifetime-plan", "account-suspension", "resource-groups", "member-groups", "resource-group-member-access", "enterprise-inquiries", "site-announcements"], timestamp: new Date().toISOString()
+  ok: true, service: "jpn-api", version: "1.8.0", status: "closed", message: "JPN is permanently shut down.", features: ["admin-invitations", "tier-management", "lifetime-plan", "account-suspension", "resource-groups", "member-groups", "resource-group-member-access", "enterprise-inquiries", "site-announcements"], timestamp: new Date().toISOString()
 }));
 
 async function requireUser(req, res, next) {
